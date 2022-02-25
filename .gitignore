@@ -1,0 +1,10 @@
+# data
+data/
+
+
+# IDE
+.vscode/
+
+
+# models
+model/
