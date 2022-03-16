@@ -161,14 +161,6 @@ def extract_keyframes(fileid: str, edge_length: int=20, background_threshold: in
         sub_segments.append({"start": start_idx, "end": end_idx, "text": item.text})
 
     # 根据 max_seq_len 和 sections 来分割 segments
-    """
-    |-----|-----|--------|
-    |--------------|
-
-    |-------|------|---|--------|--------------------|
-    |-------------------------|-------------------------|
-    |------------------|------|
-    """
     segment_idx = 0
     section_idx = 0
     keyframes_with_text = {"keyframes": [], "subtitles": []}
@@ -249,6 +241,3 @@ if __name__ == "__main__":
     max_seq_len = 250
     keyframes = extract_keyframes("-yfjQGg-aMA")
     print(keyframes)
-    # capture = cv2.VideoCapture("data/videos/-yfjQGg-aMA.mp4")
-    # seek_frame_by_idx(capture, 2089).save("-yj2.test1.png")
-    # seek_frame_by_idx(capture, 2763).save("-yj2.test2.png")
