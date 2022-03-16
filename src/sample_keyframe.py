@@ -17,14 +17,16 @@ import os
 import sys
 import cv2
 import tqdm
+import math
 import webvtt
+import random
 import pickle
 import multiprocessing
 import numpy as np
 from PIL import Image
 
 # now on server or my laptop
-on_server = False
+on_server = True
 
 if on_server:
     root_dir = "/share/tongxiao/graduation-project"
@@ -226,8 +228,11 @@ def batched_extract(fileids: list, index: int, edge_length: int=20, background_t
         save_dir = os.path.join(root_dir, data_dir, "samples", fileid)
         if not os.path.isdir(save_dir):
             os.makedirs(save_dir)
-        pickle.dump(sections, open(os.path.join(save_dir, fileid + ".sections.pkl", "wb")))
-        pickle.dump(keyframes_with_text, open(os.path.join(save_dir, fileid + ".keyframes.pkl", "wb")))
+        section_save_file = os.path.join(save_dir, fileid + ".sections.pkl")
+        keyframe_save_file = os.path.join(save_dir, fileid + ".keyframes.pkl")
+        if not(os.path.isfile(section_save_file) and os.path.isfile(keyframe_save_file)):
+            pickle.dump(sections, open(section_save_file, "wb"))
+            pickle.dump(keyframes_with_text, open(keyframe_save_file, "wb"))
 
 
 if __name__ == "__main__":
@@ -239,5 +244,25 @@ if __name__ == "__main__":
     minus_threshold = 2000
     # 用于在 section 内细分 segment, 目的是充分利用文本信息. 在 section 内按文本最长为 max_seq_len 来分 segment
     max_seq_len = 250
-    keyframes = extract_keyframes("-yfjQGg-aMA")
-    print(keyframes)
+
+    processes = 8
+    fileids = [filename.split(".")[0] for filename in os.listdir(os.path.join(root_dir, subtitle_dir))]
+    random.shuffle(fileids)
+    num_per_process = math.ceil(len(fileids) / processes)
+
+    process_list = []
+    for idx in range(processes):
+        process = multiprocessing.Process(target=batched_extract, args=(fileids[idx * num_per_process:(idx + 1) * num_per_process],
+                                                                        idx,
+                                                                        edge_length,
+                                                                        background_threshold,
+                                                                        minus_threshold,
+                                                                        max_seq_len))
+        process_list.append(process)
+        process.start()
+    
+    for process in process_list:
+        process.join()
+        process.close()
+    
+    print("Done!")
