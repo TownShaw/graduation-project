@@ -172,6 +172,13 @@ def extract_keyframes(fileid: str, edge_length: int=20, background_threshold: in
     start_idx = section_keyframes[0]
     keyframes.append(start_idx)
     while segment_idx < len(sub_segments):
+        # 存在一些数据字幕文件中的时长大于视频时长, 会出现 segment 边界大于 section 边界, 所以这里加一行直接跳过
+        # 至于为什么我也不知道 :(
+        try:
+            t = section_keyframes[section_idx + 1]
+        except IndexError:
+            break
+
         if len(tmp_sub.split()) + len(sub_segments[segment_idx]["text"].split()) <= max_seq_len and sub_segments[segment_idx]["end"] <= section_keyframes[section_idx + 1]:
             tmp_sub += ' ' + sub_segments[segment_idx]["text"]
             segment_idx += 1
