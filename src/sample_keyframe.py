@@ -227,19 +227,21 @@ def extract_keyframes(fileid: str, edge_length: int=20, background_threshold: in
 
 def batched_extract(fileids: list, index: int, edge_length: int=20, background_threshold: int=15, minus_threshold: int=2000, max_seq_len: int=250):
     for fileid in tqdm.tqdm(fileids, file=sys.stdout, position=index):
-        sections, keyframes_with_text = extract_keyframes(fileid,
-                                                          edge_length=edge_length,
-                                                          background_threshold=background_threshold,
-                                                          minus_threshold=minus_threshold,
-                                                          max_seq_len=max_seq_len)
         save_dir = os.path.join(root_dir, data_dir, "samples", fileid)
         if not os.path.isdir(save_dir):
             os.makedirs(save_dir)
         section_save_file = os.path.join(save_dir, fileid + ".sections.pkl")
         keyframe_save_file = os.path.join(save_dir, fileid + ".keyframes.pkl")
-        if not(os.path.isfile(section_save_file) and os.path.isfile(keyframe_save_file)):
-            pickle.dump(sections, open(section_save_file, "wb"))
-            pickle.dump(keyframes_with_text, open(keyframe_save_file, "wb"))
+
+        if os.path.isfile(section_save_file) and os.path.isfile(keyframe_save_file):
+            continue
+        sections, keyframes_with_text = extract_keyframes(fileid,
+                                                          edge_length=edge_length,
+                                                          background_threshold=background_threshold,
+                                                          minus_threshold=minus_threshold,
+                                                          max_seq_len=max_seq_len)
+        pickle.dump(sections, open(section_save_file, "wb"))
+        pickle.dump(keyframes_with_text, open(keyframe_save_file, "wb"))
 
 
 if __name__ == "__main__":
@@ -267,9 +269,9 @@ if __name__ == "__main__":
                                                                         max_seq_len))
         process_list.append(process)
         process.start()
-    
+
     for process in process_list:
         process.join()
         process.close()
-    
+
     print("Done!")
