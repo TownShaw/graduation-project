@@ -235,11 +235,15 @@ def batched_extract(fileids: list, index: int, edge_length: int=20, background_t
 
         if os.path.isfile(section_save_file) and os.path.isfile(keyframe_save_file):
             continue
-        sections, keyframes_with_text = extract_keyframes(fileid,
-                                                          edge_length=edge_length,
-                                                          background_threshold=background_threshold,
-                                                          minus_threshold=minus_threshold,
-                                                          max_seq_len=max_seq_len)
+        try:
+            sections, keyframes_with_text = extract_keyframes(fileid,
+                                                              edge_length=edge_length,
+                                                              background_threshold=background_threshold,
+                                                              minus_threshold=minus_threshold,
+                                                              max_seq_len=max_seq_len)
+        except:
+            print(fileid, file=sys.stderr)
+            continue
         pickle.dump(sections, open(section_save_file, "wb"))
         pickle.dump(keyframes_with_text, open(keyframe_save_file, "wb"))
 
