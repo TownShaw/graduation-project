@@ -1,0 +1,20 @@
+log:
+  name: Grad-Proj
+  log_dir: logs
+data:
+  name: Khan
+  root_dir: /home/xt/Codes/graduation-project
+  data_dir: data
+  subtitle_dir: data/subtitles
+  video_dir: data/videos
+  sample_dir: data/samples
+  stopwords_file: data/NLTK_stopwords.txt
+  word2vec: data/word2vec/glove.6B.100d.txt
+  model_save_dir: models
+
+model:
+  batch_size: 8
+  max_seq_len: 300
+  word_embedding_dim: 100
+  label_embedding_dim: 100
+  rnn_dim: 256
