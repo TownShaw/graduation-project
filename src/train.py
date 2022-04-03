@@ -30,7 +30,10 @@ def train(config: dict):
     logger.info("Loading data from '{0}'".format(sample_dir))
     images, subtitles, lens, labels = utils.load_khan_data(config, word2idx)
 
-    khan_dataset = KhanDataset(images, subtitles, lens, labels)
+    child2parent = pickle.load(open(config["data"]["hierarchy"], "rb"))
+    index2know = pickle.load(open(config["data"]["index2know"], "rb"))
+
+    khan_dataset = KhanDataset(images, subtitles, lens, labels, num_classes=config["data"]["num_classes"])
     khan_dataloader = torch.utils.data.DataLoader(khan_dataset, batch_size=config["model"]["batch_size"], shuffle=True, collate_fn=collate_fn)
 
     for batch in khan_dataloader:
