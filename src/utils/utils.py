@@ -119,6 +119,8 @@ def load_khan_data(config: dict, word2idx: dict, pad_word: str="<unk>"):
 
     images, subtitles, lens, labels = [], [], [], []
     for fileid in os.listdir(sample_dir):
+        if fileid not in id2labels:
+            continue
         sample_file = os.path.join(sample_dir, fileid, fileid + ".keyframes.pkl")
         local_images, local_subtitles, local_lens = load_data_by_path(sample_file, stopwords, word2idx, pad_word, config["model"]["max_seq_len"])
         images.append(local_images)
