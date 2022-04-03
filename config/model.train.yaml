@@ -8,7 +8,10 @@ data:
   subtitle_dir: data/subtitles
   video_dir: data/videos
   sample_dir: data/samples
-  stopwords_file: data/NLTK_stopwords.txt
+  stopwords: data/NLTK_stopwords.txt
+  id2labels: data/Khan.id2labels.pkl
+  hierarchy: data/Khan.hierarchy.pkl
+  index2know: data/Khan.index2know.pkl
   word2vec: data/word2vec/glove.6B.100d.txt
   model_save_dir: models
 
