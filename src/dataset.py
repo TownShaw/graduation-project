@@ -46,4 +46,5 @@ def collate_fn(batch_data):
     batch["images"] = torch.cat(batch["images"], dim=0)
     batch["subtitles"] = torch.cat(batch["subtitles"], dim=0)
     batch["lens"] = torch.cat(batch["lens"], dim=0)
+    batch["labels"] = torch.stack(batch["labels"], dim=0)
     return batch
