@@ -12,3 +12,7 @@ model/
 # tests
 **/*test*
 **/test/
+
+
+# latex
+latex/
