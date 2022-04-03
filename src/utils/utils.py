@@ -112,18 +112,20 @@ def load_khan_data(config: dict, word2idx: dict, pad_word: str="<unk>"):
     if pad_word not in word2idx:
         raise KeyError("'{0}' is not in word2idx!".format(pad_word))
 
-    sample_dir = os.path.join(config["data"]["root_dir"], config["data"]["sample_dir"])
-    stopwords_filepath = os.path.join(config["data"]["root_dir"], config["data"]["stopwords_file"])
+    sample_dir = config["data"]["sample_dir"]
+    stopwords_filepath = config["data"]["stopwords"]
     stopwords = get_stopwords(stopwords_filepath)
+    id2labels = pickle.load(open(config["data"]["id2labels"], "rb"))
 
-    images, subtitles, lens = [], [], []
+    images, subtitles, lens, labels = [], [], [], []
     for fileid in os.listdir(sample_dir):
         sample_file = os.path.join(sample_dir, fileid, fileid + ".keyframes.pkl")
         local_images, local_subtitles, local_lens = load_data_by_path(sample_file, stopwords, word2idx, pad_word, config["model"]["max_seq_len"])
         images.append(local_images)
         subtitles.append(local_subtitles)
         lens.append(local_lens)
-    return images, subtitles, lens
+        labels.append(id2labels[fileid])
+    return images, subtitles, lens, labels
 
 
 if __name__ == "__main__":
