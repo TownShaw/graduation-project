@@ -16,3 +16,11 @@ model/
 
 # latex
 latex/
+
+
+# cache
+**/__pycache__/
+
+
+# logs
+logs/
