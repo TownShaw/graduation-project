@@ -43,14 +43,15 @@ def train(config: dict):
     logger.info("Start training ...")
     for batch in tqdm.tqdm(khan_dataloader):
         for mini_batch in utils.iter_batch_data(batch, max_segment_num):
-            images = mini_batch["images"]
-            subtitles = mini_batch["subtitles"]
-            lens = mini_batch["lens"]
-            labels = mini_batch["labels"]
+            images = mini_batch["images"].to(config["device"])
+            subtitles = mini_batch["subtitles"].to(config["device"])
+            lens = mini_batch["lens"].to(config["device"])
+            labels = mini_batch["labels"].to(config["device"])
             segments = mini_batch["segments"]
+            image_segments = mini_batch["image_segments"]
 
             optim.zero_grad()
-            logits = model(images, (subtitles, lens), segments)
+            logits = model(images, (subtitles, lens), segments, image_segments)
             loss = loss_fn(logits, labels)
             loss.backward()
             optim.step()

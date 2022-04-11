@@ -28,11 +28,13 @@ class KhanDataset(Dataset):
 
 
 def collate_fn(batch_data):
-    batch = {"images": [], "subtitles": [], "lens": [], "labels": [], "segments": []}
+    batch = {"images": [], "subtitles": [], "lens": [], "labels": [], "segments": [], "image_segments": []}
     for data in batch_data:
         images, subtitles, lens, labels = data
         batch["labels"].append(labels)
-        segment = [len(section_images) for section_images in images]
+        image_segment = [len(section_images) for section_images in images]
+        segment = [len(section_subtitles) for section_subtitles in subtitles]
+        batch["image_segments"].append(image_segment)
         batch["segments"].append(segment)
         images = [torch.from_numpy(np.array(image, dtype=np.float32)) for section_images in images for image in section_images]
         images = torch.stack(images, dim=0)

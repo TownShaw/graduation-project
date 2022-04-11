@@ -10,6 +10,16 @@ import torch
 from torch.nn.init import xavier_normal_
 
 
+class mySequential(torch.nn.Sequential):
+    def forward(self, *inputs):
+        for module in self._modules.values():
+            if type(inputs) == tuple:
+                inputs = module(*inputs)
+            else:
+                inputs = module(inputs)
+        return inputs
+
+
 class TCA(torch.nn.Module):
     def __init__(self, word_fearture_dim, image_feature_dim, label_feature_dim, num_classes):
         super(TCA, self).__init__()
@@ -17,7 +27,7 @@ class TCA(torch.nn.Module):
         self.linear_image = torch.nn.Linear(word_fearture_dim, image_feature_dim, bias=False)
         self.S_h = torch.nn.parameter.Parameter(xavier_normal_(torch.randn(num_classes, label_feature_dim)).type(torch.float32), requires_grad=True)
 
-    def forword(self, image_x, word_x, last_w):
+    def forward(self, image_x, word_x, last_w):
         V_h = torch.multiply(last_w, word_x)
         class_O_h = self.linear_label(V_h).transpose(1, 2)
         class_attention_matrix = torch.matmul(self.S_h, class_O_h)
@@ -59,12 +69,15 @@ class CDM(torch.nn.Module):
 class HAM(torch.nn.Module):
     def __init__(self, rnn_hidden_dim, image_feature_dim, label_embedding_dim, num_classes):
         super(HAM, self).__init__()
-        self.tca = TCA(word_fearture_dim=2 * rnn_hidden_dim, label_feature_dim=label_embedding_dim)
-        self.cpm = CPM(in_channel=4 * (rnn_hidden_dim + image_feature_dim), hidden_channel=rnn_hidden_dim, num_classes=num_classes)
+        self.tca = TCA(word_fearture_dim=2 * rnn_hidden_dim,
+                       image_feature_dim=image_feature_dim,
+                       label_feature_dim=label_embedding_dim,
+                       num_classes=num_classes)
+        self.cpm = CPM(in_channel=3 * 2 * rnn_hidden_dim + image_feature_dim, hidden_channel=rnn_hidden_dim, num_classes=num_classes)
         self.cdm = CDM()
 
     def forward(self, image_feature, text_feature, text_avg, w_h_last, segments, local_output_list, local_scores_list):
-        r_att, image_att, W_att = self.tca(text_feature, w_h_last)
+        r_att, image_att, W_att = self.tca(image_feature, text_feature, w_h_last)
         cpm_input = torch.cat([r_att, text_avg, image_att, image_feature], dim=-1)
         A_L, P_L = self.cpm(cpm_input)
         w_h = self.cdm(P_L, W_att)
@@ -74,12 +87,12 @@ class HAM(torch.nn.Module):
 
 
 class HARL(torch.nn.Module):
-    def __init__(self, rnn_dim, label_embedding_dim, num_classes_list, pretrained_label_embedding=None):
+    def __init__(self, rnn_dim, image_feature_dim, label_embedding_dim, num_classes_list, pretrained_label_embedding=None):
         super(HARL, self).__init__()
         self.net_sequence = []
         for num_classes in num_classes_list:
-            self.net_sequence.append(HAM(rnn_dim, label_embedding_dim, num_classes))
-        self.net_sequence = torch.nn.Sequential(*self.net_sequence)
+            self.net_sequence.append(HAM(rnn_dim, image_feature_dim, label_embedding_dim, num_classes))
+        self.net_sequence = mySequential(*self.net_sequence)
 
     def forward(self, image_feature, rnn_out, rnn_avg, segments):
         local_output_list = []
