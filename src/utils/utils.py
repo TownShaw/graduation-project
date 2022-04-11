@@ -7,6 +7,7 @@
 '''
 
 import os
+import torch
 import pickle
 import logging
 import datetime
@@ -128,6 +129,30 @@ def load_khan_data(config: dict, word2idx: dict, pad_word: str="<unk>"):
         lens.append(local_lens)
         labels.append(id2labels[fileid])
     return images, subtitles, lens, labels
+
+
+def iter_batch_data(batch: dict, max_item_num: int):
+    """
+    
+    """
+    images, subtitles, lens, labels, segments = batch["images"], batch["subtitles"], batch["lens"], batch["labels"], batch["segments"]
+    mini_batch = {"images": [], "subtitles": [], "lens": [], "labels": [], "segments": []}
+    for idx, segment in enumerate(segments):
+        curr_item_num = 0
+        while curr_item_num + sum(segment) <= max_item_num:
+            mini_batch["images"].append(images[idx])
+            mini_batch["subtitles"].append(subtitles[idx])
+            mini_batch["lens"].append(lens[idx])
+            mini_batch["labels"].append(labels[idx])
+            mini_batch["segments"].append(segments[idx])
+            curr_item_num += sum(segment)
+        mini_batch["images"] = torch.cat(mini_batch["images"], dim=0)
+        mini_batch["subtitles"] = torch.cat(mini_batch["subtitles"], dim=0)
+        mini_batch["lens"] = torch.cat(mini_batch["lens"], dim=0)
+        mini_batch["labels"] = torch.stack(mini_batch["labels"], dim=0)
+
+        yield mini_batch
+        mini_batch = {"images": [], "subtitles": [], "lens": [], "labels": [], "segments": []}
 
 
 if __name__ == "__main__":

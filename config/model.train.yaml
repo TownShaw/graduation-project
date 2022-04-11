@@ -23,3 +23,6 @@ model:
   word_embedding_dim: 100
   label_embedding_dim: 100
   rnn_dim: 256
+  learning_rate: 0.001
+
+device: "cuda:0"

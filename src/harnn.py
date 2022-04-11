@@ -8,13 +8,19 @@
 
 import torch
 from harl import HARL
+from torch.nn.init import xavier_normal_
+from torchvision.models import resnet34
 from torch.nn.utils.rnn import pad_packed_sequence
 
 
 class EmbeddingLayer(torch.nn.Module):
-    def __init__(self, word_num, embedding_dim):
+    def __init__(self, word_num, embedding_dim, pretrained_word_matrix=None):
         super(EmbeddingLayer, self).__init__()
         self.embedding = torch.nn.Embedding(word_num, embedding_dim)
+        if pretrained_word_matrix:
+            self.embedding.weight.data = torch.from_numpy(pretrained_word_matrix)
+        else:
+            xavier_normal_(self.embedding.weight.data)
 
     def forward(self, input_x):
         return self.embedding(input_x)
@@ -46,22 +52,44 @@ class Loss(torch.nn.Module):
 
 
 class HARNN(torch.nn.Module):
-    def __init__(self, config, num_words, embedding_dim, rnn_dim, label_embedding_dim, num_classes_list, max_seq_len,
+    def __init__(self, config, num_words,
                  pretrained_word_embedding=None, pretrained_label_embedding=None):
         super(HARNN, self).__init__()
-        self.embedding = EmbeddingLayer(word_num=num_words, embedding_dim=embedding_dim)
-        self.bi_rnn = BiRNNLayer(embedding_dim, rnn_dim, num_layers=1, dropout=config.dropout)
-        self.harl = HARL(rnn_dim=rnn_dim,
-                         label_embedding_dim=label_embedding_dim,
-                         num_classes_list=num_classes_list,
+
+        self.resnet = resnet34(pretrained=True, progress=True)
+        self.embedding = EmbeddingLayer(word_num=num_words,
+                                        embedding_dim=config["model"]["word_embedding_dim"],
+                                        pretrained_word_matrix=pretrained_word_embedding)
+
+        self.bi_rnn = BiRNNLayer(in_dim=config["model"]["word_embedding_dim"],
+                                 hidden_dim=config["model"]["rnn_dim"],
+                                 num_layers=1,
+                                 dropout=config["model"]["dropout"])
+
+        self.harl = HARL(rnn_dim=config["model"]["rnn_dim"],
+                         label_embedding_dim=config["model"]["label_embedding_dim"],
+                         num_classes_list=config["data"]["num_classes_list"],
                          pretrained_label_embedding=pretrained_label_embedding)
+
         self.linear = torch.nn.Linear()
         self.loss = Loss()
 
-    def forward(self, input_x):
-        embedding_output = self.embedding(input_x)
-        rnn_out, rnn_avg = self.bi_rnn(embedding_output)
-        local_output_list, local_scores_list = self.harl(rnn_out)
+    def forward(self, image_input, text_record, segments):
+        segment_num_per_video = [sum(section) for section in segments]
+
+        # 在同一个 section 之内的图像特征首尾帧相加并 / 2, 作为相应文本段的视频特征
+        image_feature = self.resnet(image_input)
+        image_feature = (image_feature[:-1] + image_feature[1:]) / 2
+
+        # 去掉跨 section 首尾相加的图像特征
+        masked_idx = [sum(segment_num_per_video[:idx]) - 1 for idx in range(1, len(segments))]
+        mask = torch.BoolTensor([idx not in masked_idx for idx in range(image_input.shape[0])])
+        image_feature = image_feature[mask]
+
+        text_pad, lens = text_record
+        embedding_output = self.embedding(text_pad)
+        rnn_out, rnn_avg = self.bi_rnn(embedding_output, lens)
+        local_output_list, local_scores_list = self.harl(image_feature, rnn_out, rnn_avg)
         local_scores = torch.cat(local_scores_list, dim=-1)
         local_output = torch.stack(local_output_list, dim=0)
         global_output = self.linear(local_output)
