@@ -3,7 +3,7 @@ log:
   log_dir: logs
 data:
   name: Khan
-  root_dir: /home/xt/Codes/graduation-project
+  root_dir: /share/tongxiao/graduation-project
   data_dir: data
   subtitle_dir: data/subtitles
   video_dir: data/videos
@@ -18,11 +18,15 @@ data:
   num_classes_list: [6, 42, 350]
 
 model:
+  alpha: 0.5
   batch_size: 8
   max_seq_len: 300
   word_embedding_dim: 100
-  label_embedding_dim: 100
+  label_embedding_dim: 200
   rnn_dim: 256
+  rnn_num_layers: 1
+  fc_dim: 512
   learning_rate: 0.001
+  dropout: 0.5
 
-device: "cuda:0"
+device: "cpu"
