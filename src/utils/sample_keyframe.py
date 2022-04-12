@@ -21,12 +21,13 @@ import math
 import webvtt
 import random
 import pickle
+import datetime
 import multiprocessing
 import numpy as np
 from PIL import Image
 
 # now on server or my laptop
-on_server = False
+on_server = True
 
 if on_server:
     root_dir = "/share/tongxiao/graduation-project"
@@ -74,12 +75,15 @@ def wipe_background(image: Image, edge_length: int=20, background_threshold: int
     return Image.fromarray(final_image)
 
 
-def seek_frame_by_idx(capture, index: int, edge_length: int=20, background_threshold: int=15):
+def seek_frame_by_idx(capture, index: int, edge_length: int=20, background_threshold: int=15, wipe: bool=False):
     capture.set(cv2.CAP_PROP_POS_FRAMES, index)
     ret, frame = capture.read()
     if ret == True:
-        gray_frame = Image.fromarray(frame).resize((224, 224)).convert("L")
-        return wipe_background(gray_frame, edge_length, background_threshold)
+        frame = Image.fromarray(frame).resize((224, 224))
+        if wipe:
+            return wipe_background(frame.convert("L"), edge_length, background_threshold)
+        else:
+            return frame
     else:
         return None
 
@@ -95,10 +99,10 @@ def is_incremental(image1: Image, image2: Image, background_threshold: int=15, m
     # print(np.sum((diff > 0).astype(np.int16)))
     # print(np.sum((diff < 0).astype(np.int16)))
     minus_num = np.sum((diff < 0).astype(np.int16))
-    return minus_num < minus_threshold
+    return minus_num < minus_threshold, minus_num
 
 
-def split_sections(capture, edge_length: int=20, background_threshold: int=15, minus_threshold: int=2000):
+def split_sections(capture, edge_length: int=20, background_threshold: int=15, minus_threshold: int=2000, max_section_num: int=8):
     """
     
     """
@@ -109,24 +113,26 @@ def split_sections(capture, edge_length: int=20, background_threshold: int=15, m
     # 在两个帧之间进行二分查找, 找到关键帧
     low_index = 0
     high_index = int(min(interval * fps + low_index, num_frames - 1))
-    low_frame = seek_frame_by_idx(capture, low_index, edge_length, background_threshold)
-    high_frame = seek_frame_by_idx(capture, high_index, edge_length, background_threshold)
+    low_frame = seek_frame_by_idx(capture, low_index, edge_length, background_threshold, wipe=True)
+    high_frame = seek_frame_by_idx(capture, high_index, edge_length, background_threshold, wipe=True)
     # 视频首尾帧为关键帧
-    keyframes = [low_index]
+    keyframes = []
     while low_index != high_index:
-        if not is_incremental(low_frame, high_frame, background_threshold, minus_threshold):
+        is_incre, minus_num = is_incremental(low_frame, high_frame, background_threshold, minus_threshold)
+        if not is_incre:
             # 若前后帧之间相差 5s 之内则直接将前帧当作关键帧, 减少搜索
             if high_index - low_index <= int(fps * 5):
                 if low_index != 0:      # 因为 0 已经默认加入到 keyframes 中
-                    keyframes.append(low_index)
+                    keyframes.append((low_index, minus_num))
                 low_index = high_index
                 low_frame = high_frame
                 high_index = int(min(interval * fps + low_index, num_frames - 1))
-                high_frame = seek_frame_by_idx(capture, high_index, edge_length, background_threshold)
+                high_frame = seek_frame_by_idx(capture, high_index, edge_length, background_threshold, wipe=True)
                 continue
             middle_index = low_index + (high_index - low_index) // 2
-            middle_frame = seek_frame_by_idx(capture, middle_index, edge_length, background_threshold)
-            if is_incremental(low_frame, middle_frame, background_threshold, minus_threshold):
+            middle_frame = seek_frame_by_idx(capture, middle_index, edge_length, background_threshold, wipe=True)
+            is_incre, _ = is_incremental(low_frame, middle_frame, background_threshold, minus_threshold)
+            if is_incre:
                 low_index = middle_index
                 low_frame = middle_frame
             else:
@@ -137,12 +143,20 @@ def split_sections(capture, edge_length: int=20, background_threshold: int=15, m
             low_index = high_index
             low_frame = high_frame
             high_index = int(min(interval * fps + low_index, num_frames - 1))
-            high_frame = seek_frame_by_idx(capture, high_index, edge_length, background_threshold)
-    keyframes.append(num_frames - 1)
+            high_frame = seek_frame_by_idx(capture, high_index, edge_length, background_threshold, wipe=True)
+    keyframes = sorted(keyframes, key=lambda x: x[1])[:max_section_num - 1]
+    keyframes = [item[0] for item in keyframes]
+    keyframes += [0, num_frames - 1]
+    keyframes.sort()
     return keyframes
 
 
-def extract_keyframes(fileid: str, edge_length: int=20, background_threshold: int=15, minus_threshold: int=2000, max_seq_len: int=250) -> tuple:
+def extract_keyframes(fileid: str,
+                      edge_length: int=20,
+                      background_threshold: int=15,
+                      minus_threshold: int=2000,
+                      max_seq_len: int=200,
+                      max_section_num: int=8) -> tuple:
     videopath = os.path.join(root_dir, video_dir, fileid + ".mp4")
     subpath = os.path.join(root_dir, subtitle_dir, fileid + ".en.vtt")
 
@@ -152,7 +166,8 @@ def extract_keyframes(fileid: str, edge_length: int=20, background_threshold: in
     section_keyframes = split_sections(capture,
                                        edge_length=edge_length,
                                        background_threshold=background_threshold,
-                                       minus_threshold=minus_threshold)
+                                       minus_threshold=minus_threshold,
+                                       max_section_num=max_section_num)
 
     # read subtitles
     vtt = webvtt.read(subpath)
@@ -225,25 +240,31 @@ def extract_keyframes(fileid: str, edge_length: int=20, background_threshold: in
     return section_keyframes, keyframes_with_text
 
 
-def batched_extract(fileids: list, index: int, edge_length: int=20, background_threshold: int=15, minus_threshold: int=2000, max_seq_len: int=250):
+def batched_extract(dest_dir: str,
+                    fileids: list,
+                    index: int,
+                    edge_length: int=20,
+                    background_threshold: int=15,
+                    minus_threshold: int=2000,
+                    max_seq_len: int=200,
+                    max_section_num: int=8):
     for fileid in tqdm.tqdm(fileids, file=sys.stdout, position=index):
-        save_dir = os.path.join(root_dir, data_dir, "samples", fileid)
-        if not os.path.isdir(save_dir):
-            os.makedirs(save_dir)
+        save_dir = os.path.join(dest_dir, fileid)
         section_save_file = os.path.join(save_dir, fileid + ".sections.pkl")
         keyframe_save_file = os.path.join(save_dir, fileid + ".keyframes.pkl")
 
-        if os.path.isfile(section_save_file) and os.path.isfile(keyframe_save_file):
-            continue
         try:
             sections, keyframes_with_text = extract_keyframes(fileid,
                                                               edge_length=edge_length,
                                                               background_threshold=background_threshold,
                                                               minus_threshold=minus_threshold,
-                                                              max_seq_len=max_seq_len)
-        except:
-            print(fileid, file=sys.stderr)
+                                                              max_seq_len=max_seq_len,
+                                                              max_section_num=max_section_num)
+        except Exception as e:
+            print(fileid, e, file=sys.stderr)
             continue
+        if not os.path.isdir(save_dir):
+            os.mkdir(save_dir)
         pickle.dump(sections, open(section_save_file, "wb"))
         pickle.dump(keyframes_with_text, open(keyframe_save_file, "wb"))
 
@@ -256,21 +277,54 @@ if __name__ == "__main__":
     # 用于判定两图像之间是否为 incremental: 若将前后图像作 diff, 若为负值的像素个数大于 minus_threshold 则认为不是 incremental
     minus_threshold = 2000
     # 用于在 section 内细分 segment, 目的是充分利用文本信息. 在 section 内按文本最长为 max_seq_len 来分 segment
-    max_seq_len = 250
+    max_seq_len = 200
+    # 每个 video 内最多 section 个数
+    max_section_num = 8
+
+    # test case
+    # fileid = "00fgAG6VrRQ"
+    # sections, keyframes = extract_keyframes(fileid, edge_length, background_threshold, minus_threshold, max_seq_len, max_section_num)
+    # print("Done.")
+
+    dest_dir = os.path.join(root_dir, data_dir, "samples")
+    if not os.path.isdir(dest_dir):
+        os.mkdir(dest_dir)
+
+    # 确定需要进行分段的 ids, 以下为默认进行分段的 ids
+    fileids = [filename.split(".")[0] for filename in os.listdir(os.path.join(root_dir, subtitle_dir))]
+
+    boundary_time = float(datetime.datetime(2022, 4, 12, 12, 0, 0).strftime("%s"))
+    removed_ids = []
+    for fileid in fileids:
+        section_file = os.path.join(dest_dir, fileid, fileid + ".section.pkl")
+        keyframe_file = os.path.join(dest_dir, fileid, fileid + ".keyframes.pkl")
+
+        # 若文件存在, 但是生成时间早于给定的时间, 则重新生成
+        if os.path.isfile(section_file) and os.path.isfile(keyframe_file):
+            if os.path.getmtime(section_file) >= boundary_time \
+            and os.path.getmtime(keyframe_file) >= boundary_time \
+            and fileid in fileids:
+                removed_ids.append(fileid)     # 从 ids 列表中删除, 表示不需要重新生成
+    for fileid in removed_ids:
+        fileids.remove(fileid)
+
+    # 需要自定义分段 ids 在下面定义, 将上面直接全部注释即可
+    # fileids = ["00fgAG6VrRQ"]
 
     processes = 8
-    fileids = [filename.split(".")[0] for filename in os.listdir(os.path.join(root_dir, subtitle_dir))]
     random.shuffle(fileids)
     num_per_process = math.ceil(len(fileids) / processes)
 
     process_list = []
     for idx in range(processes):
-        process = multiprocessing.Process(target=batched_extract, args=(fileids[idx * num_per_process:(idx + 1) * num_per_process],
+        process = multiprocessing.Process(target=batched_extract, args=(dest_dir,
+                                                                        fileids[idx * num_per_process:(idx + 1) * num_per_process],
                                                                         idx,
                                                                         edge_length,
                                                                         background_threshold,
                                                                         minus_threshold,
-                                                                        max_seq_len))
+                                                                        max_seq_len,
+                                                                        max_section_num))
         process_list.append(process)
         process.start()
 
