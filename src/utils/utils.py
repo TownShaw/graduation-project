@@ -84,12 +84,15 @@ def tokenize_and_pad(subtitles: str, stopwords: list, word2idx: dict, pad_word: 
     subtitles = [list(tokenize(subtitle, lowercase=True, deacc=True)) for subtitle in subtitles]
     # get rid of stopwords & embedding words
     subtitles = [[word2idx.get(word, word2idx["<unk>"]) for word in subtitle if word not in stopwords] for subtitle in subtitles]
+    # lens must between [1, max_seq_len]
+    # if there exists some subtitle which length is equal to 0, let <unk> as its only word.
     lens = [min(len(subtitle), max_seq_len) for subtitle in subtitles]
     for idx, length in enumerate(lens):
         if length >= max_seq_len:
             subtitles[idx] = subtitles[idx][:max_seq_len]
         else:
             subtitles[idx] = subtitles[idx] + [word2idx[pad_word] for _ in range(max_seq_len - length)]
+        lens[idx] = max(lens[idx], 1)
     return subtitles, lens
 
 
@@ -145,8 +148,9 @@ def iter_batch_data(batch: dict, max_item_num: int):
     while index < len(segments):
     # for idx, segment in enumerate(segments):
         curr_item_num = 0
-        while curr_item_num + segment_num_per_video[index] <= max_item_num \
-              or (curr_item_num == 0 and segment_num_per_video[index] > max_item_num):      # 如果单个 video 的 segment 数量大于 max_item_num 则强行塞进去
+        while index < len(segment_num_per_video) \
+            and (curr_item_num + segment_num_per_video[index] <= max_item_num \
+                or (curr_item_num == 0 and segment_num_per_video[index] > max_item_num)):      # 如果单个 video 的 segment 数量大于 max_item_num 则强行塞进去
             start_idx = sum(segment_num_per_video[:index])
             end_idx = sum(segment_num_per_video[:index + 1])
             image_start_idx = sum(image_num_per_video[:index])
@@ -165,7 +169,7 @@ def iter_batch_data(batch: dict, max_item_num: int):
         mini_batch["labels"] = torch.stack(mini_batch["labels"], dim=0)
 
         yield mini_batch
-        mini_batch = {"images": [], "subtitles": [], "lens": [], "labels": [], "segments": []}
+        mini_batch = {"images": [], "subtitles": [], "lens": [], "labels": [], "segments": [], "image_segments": []}
 
 
 if __name__ == "__main__":
