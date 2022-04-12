@@ -16,7 +16,7 @@ import numpy as np
 import torch.utils.data
 import utils.utils as utils
 from dataset import KhanDataset, collate_fn
-from harnn import HARNN, Loss
+from harnn import HARNN, HierarchyLossWithSegments
 
 
 def train(config: dict):
@@ -37,7 +37,7 @@ def train(config: dict):
 
     model = HARNN(config, len(word2idx)).to(config["device"])
     optim = torch.optim.Adam(model.parameters(), lr=config["model"]["learning_rate"])
-    loss_fn = Loss()
+    loss_fn = HierarchyLossWithSegments()
 
     max_segment_num = 32
     logger.info("Start training ...")
@@ -51,8 +51,8 @@ def train(config: dict):
             image_segments = mini_batch["image_segments"]
 
             optim.zero_grad()
-            logits = model(images, (subtitles, lens), segments, image_segments)
-            loss = loss_fn(logits, labels)
+            section_scores, video_scores = model(images, (subtitles, lens), segments, image_segments)
+            loss = loss_fn(section_scores, video_scores, labels, segments)
             loss.backward()
             optim.step()
 

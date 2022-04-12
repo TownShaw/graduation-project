@@ -37,7 +37,7 @@ def collate_fn(batch_data):
         batch["image_segments"].append(image_segment)
         batch["segments"].append(segment)
         images = [torch.from_numpy(np.array(image, dtype=np.float32)) for section_images in images for image in section_images]
-        images = torch.stack(images, dim=0)
+        images = torch.stack(images, dim=0).transpose(1, 3)
         subtitles = [torch.LongTensor(subtitle) for section_subtitles in subtitles for subtitle in section_subtitles]
         subtitles = torch.stack(subtitles, dim=0)
         lens = [length for section_lens in lens for length in section_lens]

@@ -67,13 +67,13 @@ class CDM(torch.nn.Module):
 
 
 class HAM(torch.nn.Module):
-    def __init__(self, rnn_hidden_dim, image_feature_dim, label_embedding_dim, num_classes):
+    def __init__(self, rnn_hidden_dim, image_feature_dim, label_embedding_dim, fc_dim, num_classes):
         super(HAM, self).__init__()
         self.tca = TCA(word_fearture_dim=2 * rnn_hidden_dim,
                        image_feature_dim=image_feature_dim,
                        label_feature_dim=label_embedding_dim,
                        num_classes=num_classes)
-        self.cpm = CPM(in_channel=3 * 2 * rnn_hidden_dim + image_feature_dim, hidden_channel=rnn_hidden_dim, num_classes=num_classes)
+        self.cpm = CPM(in_channel=3 * 2 * rnn_hidden_dim + image_feature_dim, hidden_channel=fc_dim, num_classes=num_classes)
         self.cdm = CDM(rnn_hidden_dim=rnn_hidden_dim)
 
     def forward(self, image_feature, text_feature, text_avg, w_h_last, local_output_list, local_scores_list):
@@ -87,14 +87,14 @@ class HAM(torch.nn.Module):
 
 
 class HARL(torch.nn.Module):
-    def __init__(self, rnn_dim, image_feature_dim, label_embedding_dim, num_classes_list, pretrained_label_embedding=None):
+    def __init__(self, rnn_dim, image_feature_dim, label_embedding_dim, fc_dim, num_classes_list, pretrained_label_embedding=None):
         super(HARL, self).__init__()
         self.net_sequence = []
         for num_classes in num_classes_list:
-            self.net_sequence.append(HAM(rnn_dim, image_feature_dim, label_embedding_dim, num_classes))
+            self.net_sequence.append(HAM(rnn_dim, image_feature_dim, label_embedding_dim, fc_dim, num_classes))
         self.net_sequence = mySequential(*self.net_sequence)
 
-    def forward(self, image_feature, rnn_out, rnn_avg, segments):
+    def forward(self, image_feature, rnn_out, rnn_avg):
         local_output_list = []
         local_scores_list = []
         # let w_0 = input_x
