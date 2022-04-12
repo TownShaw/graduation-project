@@ -56,13 +56,13 @@ class CPM(torch.nn.Module):
 
 
 class CDM(torch.nn.Module):
-    def __init__(self):
+    def __init__(self, rnn_hidden_dim):
         super(CDM, self).__init__()
+        self.rnn_hidden_dim = rnn_hidden_dim
 
     def forward(self, P_L, atttention_weight):
-        K_h = torch.mean(torch.multiply(atttention_weight, P_L))
-        broadcast_dim = atttention_weight.shape[-1]
-        w_h = K_h.broadcast_to((broadcast_dim, K_h.shape[-1]))
+        K_h = torch.mean(torch.mul(atttention_weight, P_L.unsqueeze(-1)), dim=1)
+        w_h = K_h.unsqueeze(-1).repeat(1, 1, 2 * self.rnn_hidden_dim)
         return w_h
 
 
@@ -74,9 +74,9 @@ class HAM(torch.nn.Module):
                        label_feature_dim=label_embedding_dim,
                        num_classes=num_classes)
         self.cpm = CPM(in_channel=3 * 2 * rnn_hidden_dim + image_feature_dim, hidden_channel=rnn_hidden_dim, num_classes=num_classes)
-        self.cdm = CDM()
+        self.cdm = CDM(rnn_hidden_dim=rnn_hidden_dim)
 
-    def forward(self, image_feature, text_feature, text_avg, w_h_last, segments, local_output_list, local_scores_list):
+    def forward(self, image_feature, text_feature, text_avg, w_h_last, local_output_list, local_scores_list):
         r_att, image_att, W_att = self.tca(image_feature, text_feature, w_h_last)
         cpm_input = torch.cat([r_att, text_avg, image_att, image_feature], dim=-1)
         A_L, P_L = self.cpm(cpm_input)
@@ -98,7 +98,7 @@ class HARL(torch.nn.Module):
         local_output_list = []
         local_scores_list = []
         # let w_0 = input_x
-        self.net_sequence(image_feature, rnn_out, rnn_avg, rnn_out, segments, local_output_list, local_scores_list)
+        self.net_sequence(image_feature, rnn_out, rnn_avg, rnn_out, local_output_list, local_scores_list)
         return local_output_list, local_scores_list
 
 

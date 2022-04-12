@@ -80,7 +80,7 @@ class HARNN(torch.nn.Module):
         # 在同一个 section 之内的图像特征首尾帧相加并 / 2, 作为相应文本段的视频特征
         shape = image_input.shape
         # TODO: 视频分段保留原 RGB 图像, 不需要转化为灰度图像
-        image_input = torch.randn(shape[0], 3, shape[1], shape[2]).to("cuda:0")
+        image_input = torch.randn(shape[0], 3, shape[1], shape[2]).to("cuda:3")
         image_feature = self.resnet(image_input)
         image_feature = (image_feature[:-1] + image_feature[1:]) / 2
 
