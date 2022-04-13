@@ -12,6 +12,7 @@ import tqdm
 import json
 import yaml
 import torch
+import numpy as np
 import torch.utils.data
 import utils.utils as utils
 from dataset import KhanDataset, collate_fn
@@ -115,12 +116,13 @@ def train(config: dict):
 
             tmp_step += 1
             if tmp_step % 100 == 0:
-                outputs = torch.cat(outputs_list, dim=0)
-                eval_labels = torch.cat(labels_list, dim=0)
-                precision, recall, f1 = utils.metric(outputs,
-                                                     eval_labels,
-                                                     threshold=config["model"]["threshold"],
-                                                     num_classes_list=config["data"]["num_classes_list"])
+                outputs = np.concatenate(outputs_list, axis=0)
+                eval_labels = np.concatenate(labels_list, axis=0)
+                TP, FP, FN = utils.metric(outputs,
+                                          eval_labels,
+                                          threshold=config["model"]["threshold"],
+                                          num_classes_list=config["data"]["num_classes_list"])
+                precision, recall, f1 = utils.calculate(TP, FP, FN)
                 logger.info("Epoch: {}, Step: {}, Train Loss: {:.4f}, Precsion: {:.4f}, Recall: {:.4f}, F1: {:.4f}".format(epoch + 1,
                                                                                                                            tmp_step,
                                                                                                                            total_loss / 100,
