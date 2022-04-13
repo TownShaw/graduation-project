@@ -12,6 +12,7 @@ import tqdm
 import json
 import yaml
 import torch
+import numpy as np
 import torch.utils.data
 import utils.utils as utils
 from dataset import KhanDataset, collate_fn
@@ -115,8 +116,8 @@ def train(config: dict):
 
             tmp_step += 1
             if tmp_step % 100 == 0:
-                outputs = torch.cat(outputs_list, dim=0)
-                eval_labels = torch.cat(labels_list, dim=0)
+                outputs = np.concatenate(outputs_list, axis=0)
+                eval_labels = np.concatenate(labels_list, axis=0)
                 precision, recall, f1 = utils.metric(outputs,
                                                      eval_labels,
                                                      threshold=config["model"]["threshold"],
