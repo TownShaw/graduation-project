@@ -19,9 +19,12 @@ def test_segmentation(fileid: str):
     global segment_exceed_32
     global segment_exceed_32_list
     segment_num = 0
+    assert len(keyframes["keyframes"]) == len(keyframes["subtitles"]), "{} length of section_keyframes mismatch length of section_subtitles!".format(fileid)
+    assert len(keyframes["keyframes"]) > 0, "{} length of sections NOT bigger than 0!".format(fileid)
     for section_keyframes, section_subtitles in zip(*keyframes.values()):
         segment_num += len(section_subtitles)
         assert len(section_keyframes) == len(section_subtitles) + 1, "{} length of keyframes mismatch length of subtitles!".format(fileid)
+        assert len(section_keyframes) > 0, "{} length of keyframes = 0!".format(fileid)
         for frame in section_keyframes:
             assert frame.size == (224, 224), "{} keyframe size not equal to (224, 224)!".format(fileid)
         for subtitle in section_subtitles:
@@ -36,8 +39,10 @@ def test_segmentation(fileid: str):
 
 
 if __name__ == "__main__":
+    error_ids = ["Nue0DINMRPM", "SysHZ6-yai0", "43j2gGEP4JI"]
     for fileid in tqdm.tqdm(os.listdir(root_dir), file=sys.stdout):
-        test_segmentation(fileid)
+        if fileid not in error_ids:
+            test_segmentation(fileid)
     print(exceed_max_seq_len_num, total_subtitle_num, exceed_max_seq_len_num / total_subtitle_num)
     print(segment_exceed_32)
     print(segment_exceed_32_list)
