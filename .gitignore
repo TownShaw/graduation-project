@@ -12,6 +12,8 @@ model/
 # tests
 **/*test*
 **/test/
+# except src/utils/test_segmentation.py
+!src/utils/test_segmentation.py
 
 
 # latex
