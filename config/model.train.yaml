@@ -14,11 +14,12 @@ data:
   index2know: data/Khan.index2know.pkl
   word2vec: data/word2vec/glove.6B.100d.txt
   model_save_dir: models
+  model_name: HARNN.Khan.model
   num_classes: 398
   num_classes_list: [6, 42, 350]
 
 model:
-  alpha: 0.5
+  epochs: 20
   batch_size: 8
   max_seq_len: 300
   word_embedding_dim: 100
@@ -27,6 +28,8 @@ model:
   rnn_num_layers: 1
   fc_dim: 512
   learning_rate: 0.001
+  alpha: 0.5
   dropout: 0.5
+  threshold: 0.5
 
-device: "cpu"
+device: "cuda:0"
