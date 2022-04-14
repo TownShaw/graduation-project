@@ -18,7 +18,7 @@ class KhanDataset(Dataset):
         super(KhanDataset, self).__init__()
         self.config = config
         self.word2idx = word2idx
-        self.id2labels = pickle.load(open(config["data"]["id2labels"]), "rb")
+        self.id2labels = pickle.load(open(config["data"]["id2labels"], "rb"))
         # delete fileids that not in id2labels, which means delete data that doesn't have a label
         self.fileids = list(set(fileids).intersection(set(self.id2labels.keys())))
         self.stopwords = get_stopwords(self.config["data"]["stopwords"])
