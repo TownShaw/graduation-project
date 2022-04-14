@@ -21,6 +21,7 @@ data:
 model:
   epochs: 20
   batch_size: 8
+  pad_word: <unk>
   max_seq_len: 300
   word_embedding_dim: 100
   label_embedding_dim: 200
