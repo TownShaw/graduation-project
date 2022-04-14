@@ -18,18 +18,20 @@ class KhanDataset(Dataset):
         super(KhanDataset, self).__init__()
         self.config = config
         self.word2idx = word2idx
-        self.pad_word = self.config["model"]["pad_word"]
         self.id2labels = pickle.load(open(config["data"]["id2labels"]), "rb")
         # delete fileids that not in id2labels, which means delete data that doesn't have a label
         self.fileids = list(set(fileids).intersection(set(self.id2labels.keys())))
         self.stopwords = get_stopwords(self.config["data"]["stopwords"])
-        self.max_seq_len = self.config["model"]["max_seq_len"]
         self.num_classes = self.config["data"]["num_classes"]
 
     def __getitem__(self, idx):
         fileid = self.fileids[idx]
         filepath = os.path.join(self.config["data"]["sample_dir"], fileid, fileid + ".keyframes.pkl")
-        images, subtitles, lens = load_khan_data_by_id(filepath, self.word2idx, self.stopwords, self.max_seq_len, self.pad_word)
+        images, subtitles, lens = load_khan_data_by_id(filepath,
+                                                       self.word2idx,
+                                                       self.stopwords,
+                                                       max_seq_len=self.config["model"]["max_seq_len"],
+                                                       pad_word=self.config["model"]["pad_word"])
 
         label = self.id2labels[fileid]
         multi_hot_label = torch.FloatTensor([1. if i in label else 0. for i in range(self.num_classes)])
