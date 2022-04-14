@@ -181,6 +181,11 @@ def extract_keyframes(fileid: str,
     segment_idx = 0
     section_idx = 0
     keyframes_with_text = {"keyframes": [], "subtitles": []}
+    # if len(sub_segments) == 0:
+    #     keyframes_with_text["keyframes"] = section_keyframes
+    #     for idx in range(len(section_keyframes) - 1):
+    #         keyframes_with_text["subtitles"].append([""])
+    #     return section_keyframes, keyframes_with_text
     keyframes = []
     subtitles = []
     tmp_sub = ""
@@ -218,26 +223,58 @@ def extract_keyframes(fileid: str,
             keyframes.append(sub_segments[segment_idx]["end"])
             subtitles.append(tmp_sub)
             tmp_sub = ""
-            segment_idx += 1
-    # 加上最后一个 segment
-    if keyframes[0] != section_keyframes[-1]:
-        keyframes.append(section_keyframes[-1])
+            # segment_idx += 1
+    # 加上后面的 segment & sections                                   原注释: (最后一个 segment)?
+    if keyframes[-1] != section_keyframes[-1]:
+        # 找到大于且距离 keyframes[-1] 最近的 section_keyframe
+        nearest_keyframe = section_keyframes[-1]
+        for frame_idx in section_keyframes:
+            if frame_idx > keyframes[-1]:
+                nearest_keyframe = frame_idx
+                break
+        # 加上该 section 中的最后一个 segment
+        keyframes.append(nearest_keyframe)
         subtitles.append(tmp_sub)
         keyframes_with_text["keyframes"].append(keyframes)
         keyframes_with_text["subtitles"].append(subtitles)
+        # 若后面还有无字的 sections
+        if nearest_keyframe != section_keyframes[-1]:
+            index = section_keyframes.index(nearest_keyframe)
+            for idx in range(index, len(section_keyframes) - 1):
+                keyframes_with_text["keyframes"].append([section_keyframes[idx], section_keyframes[idx + 1]])
+                keyframes_with_text["subtitles"].append([""])
     # 过滤 section 中没有文本的
-    tmp = {key: [] for key in keyframes_with_text.keys()}
-    for frames, subs in zip(keyframes_with_text["keyframes"], keyframes_with_text["subtitles"]):
-        if len(subs) == 1 and subs[0] == "":
-            continue
-        tmp["keyframes"].append(frames)
-        tmp["subtitles"].append(subs)
-    keyframes_with_text = tmp
-    del tmp
+    # tmp = {key: [] for key in keyframes_with_text.keys()}
+    # for frames, subs in zip(keyframes_with_text["keyframes"], keyframes_with_text["subtitles"]):
+    #     if len(subs) == 1 and subs[0] == "":
+    #         continue
+    #     tmp["keyframes"].append(frames)
+    #     tmp["subtitles"].append(subs)
+    # keyframes_with_text = tmp
+    # del tmp
+
     for section_idx in range(len(keyframes_with_text["keyframes"])):
         for idx, frame_index in enumerate(keyframes_with_text["keyframes"][section_idx]):
             keyframes_with_text["keyframes"][section_idx][idx] = seek_frame_by_idx(capture, frame_index)
+
+    test_segmentation(fileid, section_keyframes, keyframes_with_text)
     return section_keyframes, keyframes_with_text
+
+
+def test_segmentation(fileid: str, section_keyframes: list, keyframes_with_text: dict):
+    # Assertions
+    assert len(keyframes_with_text["keyframes"]) == len(section_keyframes) - 1, "{} length of sections mismatch!".format(fileid)
+    assert len(keyframes_with_text["keyframes"]) == len(keyframes_with_text["subtitles"]), \
+        "{} length of section_keyframes mismatch length of section_subtitles!".format(fileid)
+
+    assert len(keyframes_with_text["keyframes"]) > 0, "{} length of sections NOT bigger than 0!".format(fileid)
+    assert len(keyframes_with_text["keyframes"]) <= 8, "{} section number bigger than 8!".format(fileid)
+    for section_keyframes, section_subtitles in zip(*keyframes_with_text.values()):
+        assert len(section_keyframes) == len(section_subtitles) + 1, "{} length of keyframes mismatch length of subtitles!".format(fileid)
+        assert len(section_keyframes) > 0, "{} length of keyframes = 0!".format(fileid)
+        # assert len(section_keyframes) == len(set(section_keyframes)), "{} exists duplicate keyframe!".format(fileid)
+        for frame in section_keyframes:
+            assert frame.size == (224, 224), "{} keyframe size not equal to (224, 224)!".format(fileid)
 
 
 def batched_extract(dest_dir: str,
@@ -282,7 +319,8 @@ if __name__ == "__main__":
     max_section_num = 8
 
     # test case
-    # fileid = "00fgAG6VrRQ"
+    # fileid = "Nue0DINMRPM"
+    # fileid = "DfO27juYly8"
     # sections, keyframes = extract_keyframes(fileid, edge_length, background_threshold, minus_threshold, max_seq_len, max_section_num)
     # print("Done.")
 
@@ -293,10 +331,10 @@ if __name__ == "__main__":
     # 确定需要进行分段的 ids, 以下为默认进行分段的 ids
     fileids = [filename.split(".")[0] for filename in os.listdir(os.path.join(root_dir, subtitle_dir))]
 
-    boundary_time = float(datetime.datetime(2022, 4, 12, 12, 0, 0).strftime("%s"))
+    boundary_time = float(datetime.datetime(2022, 4, 14, 18, 0, 0).strftime("%s"))
     removed_ids = []
     for fileid in fileids:
-        section_file = os.path.join(dest_dir, fileid, fileid + ".section.pkl")
+        section_file = os.path.join(dest_dir, fileid, fileid + ".sections.pkl")
         keyframe_file = os.path.join(dest_dir, fileid, fileid + ".keyframes.pkl")
 
         # 若文件存在, 但是生成时间早于给定的时间, 则重新生成
@@ -312,6 +350,7 @@ if __name__ == "__main__":
     # fileids = ["00fgAG6VrRQ"]
 
     processes = 8
+    random.seed(2022)
     random.shuffle(fileids)
     num_per_process = math.ceil(len(fileids) / processes)
 
