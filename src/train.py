@@ -32,15 +32,13 @@ def train(config: dict):
     # train_set = ["00fgAG6VrRQ"]
     # validation_set = os.listdir("data/samples_test")
     train_set, validation_set = datasets["train_set"], datasets["validation_set"]
-    train_data = utils.load_khan_data(config, train_set, word2idx)
-    validation_data = utils.load_khan_data(config, validation_set, word2idx)
 
-    khan_dataset_train = KhanDataset(*train_data, num_classes=config["data"]["num_classes"])
+    khan_dataset_train = KhanDataset(config, train_set, word2idx=word2idx)
     khan_dataloader_train = torch.utils.data.DataLoader(khan_dataset_train,
                                                         batch_size=config["model"]["batch_size"],
                                                         shuffle=True,
                                                         collate_fn=collate_fn)
-    khan_dataset_validation = KhanDataset(*validation_data, num_classes=config["data"]["num_classes"])
+    khan_dataset_validation = KhanDataset(config, validation_set, word2idx=word2idx)
     khan_dataloader_validation = torch.utils.data.DataLoader(khan_dataset_validation,
                                                              batch_size=config["model"]["batch_size"],
                                                              shuffle=False,
