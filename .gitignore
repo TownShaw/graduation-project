@@ -24,5 +24,9 @@ latex/
 **/__pycache__/
 
 
+# models
+models/
+
+
 # logs
 logs/
