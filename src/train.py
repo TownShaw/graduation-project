@@ -66,8 +66,8 @@ def train(config: dict):
 
     # run an eval epoch before training
     model.eval()
+    TP, FP, FN = 0, 0, 0
     for eval_batch in tqdm.tqdm(khan_dataloader_validation):
-        TP, FP, FN = 0, 0, 0
         for mini_eval_batch in utils.iter_batch_data(eval_batch, max_segment_num):
             images = mini_eval_batch["images"].to(config["device"])
             subtitles = mini_eval_batch["subtitles"].to(config["device"])
@@ -134,8 +134,8 @@ def train(config: dict):
                 total_loss = 0.0
 
         model.eval()
+        TP, FP, FN = 0, 0, 0
         for eval_batch in tqdm.tqdm(khan_dataloader_validation):
-            TP, FP, FN = 0, 0, 0
             for mini_eval_batch in utils.iter_batch_data(eval_batch, max_segment_num):
                 images = mini_eval_batch["images"].to(config["device"])
                 subtitles = mini_eval_batch["subtitles"].to(config["device"])
