@@ -199,12 +199,12 @@ def extract_keyframes(fileid: str,
         except IndexError:
             break
 
-        if len(tmp_sub.split()) + len(sub_segments[segment_idx]["text"].split()) <= max_seq_len and sub_segments[segment_idx]["end"] <= section_keyframes[section_idx + 1]:
+        if len(tmp_sub.split()) + len(sub_segments[segment_idx]["text"].split()) <= max_seq_len and sub_segments[segment_idx]["end"] < section_keyframes[section_idx + 1]:
             tmp_sub += ' ' + sub_segments[segment_idx]["text"]
             segment_idx += 1
             continue
         # segment 末端已超过现在的 section 末端
-        if sub_segments[segment_idx]["end"] > section_keyframes[section_idx + 1]:
+        if sub_segments[segment_idx]["end"] >= section_keyframes[section_idx + 1]:
             keyframes.append(section_keyframes[section_idx + 1])
             # 若该 segment 并未全在下一个 section 中, 则将对应的字幕文本算在现在的 section 中
             if not sub_segments[segment_idx]["start"] >= section_keyframes[section_idx + 1]:
@@ -320,7 +320,7 @@ if __name__ == "__main__":
 
     # test case
     # fileid = "Nue0DINMRPM"
-    # fileid = "DfO27juYly8"
+    # fileid = "0nKP1FdSzEg"
     # sections, keyframes = extract_keyframes(fileid, edge_length, background_threshold, minus_threshold, max_seq_len, max_section_num)
     # print("Done.")
 
@@ -347,7 +347,7 @@ if __name__ == "__main__":
         fileids.remove(fileid)
 
     # 需要自定义分段 ids 在下面定义, 将上面直接全部注释即可
-    # fileids = ["00fgAG6VrRQ"]
+    # fileids = ["Onkd8tChC2A"]
 
     processes = 8
     random.seed(2022)

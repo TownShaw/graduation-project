@@ -5,26 +5,40 @@
 @Description:
 
 '''
+import os
 import torch
+import pickle
 import numpy as np
 from torch.utils.data import Dataset
+from utils.utils import get_stopwords, load_khan_data_by_id
 
 
 class KhanDataset(Dataset):
-    def __init__(self, images, subtitles, lens, labels, num_classes) -> None:
+    def __init__(self, config: dict, fileids: list, word2idx: dict) -> None:
         super(KhanDataset, self).__init__()
-        self.images = images
-        self.subtitles = subtitles
-        self.lens = lens
-        self.labels = labels
-        self.num_classes = num_classes
+        self.config = config
+        self.word2idx = word2idx
+        self.id2labels = pickle.load(open(config["data"]["id2labels"], "rb"))
+        # delete fileids that not in id2labels, which means delete data that doesn't have a label
+        self.fileids = list(set(fileids).intersection(set(self.id2labels.keys())))
+        self.stopwords = get_stopwords(self.config["data"]["stopwords"])
+        self.num_classes = self.config["data"]["num_classes"]
 
     def __getitem__(self, idx):
-        multi_hot_label = torch.FloatTensor([1. if i in self.labels[idx] else 0. for i in range(self.num_classes)])
-        return self.images[idx], self.subtitles[idx], self.lens[idx], multi_hot_label
+        fileid = self.fileids[idx]
+        filepath = os.path.join(self.config["data"]["sample_dir"], fileid, fileid + ".keyframes.pkl")
+        images, subtitles, lens = load_khan_data_by_id(filepath,
+                                                       self.word2idx,
+                                                       self.stopwords,
+                                                       max_seq_len=self.config["model"]["max_seq_len"],
+                                                       pad_word=self.config["model"]["pad_word"])
+
+        label = self.id2labels[fileid]
+        multi_hot_label = torch.FloatTensor([1. if i in label else 0. for i in range(self.num_classes)])
+        return images, subtitles, lens, multi_hot_label
 
     def __len__(self):
-        return len(self.labels)
+        return len(self.fileids)
 
 
 def collate_fn(batch_data):
