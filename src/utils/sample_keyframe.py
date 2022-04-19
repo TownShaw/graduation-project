@@ -151,15 +151,13 @@ def split_sections(capture, edge_length: int=20, background_threshold: int=15, m
     return keyframes
 
 
-def extract_keyframes(fileid: str,
+def extract_keyframes(subpath: str,
+                      videopath: str,
                       edge_length: int=20,
                       background_threshold: int=15,
                       minus_threshold: int=2000,
                       max_seq_len: int=200,
                       max_section_num: int=8) -> tuple:
-    videopath = os.path.join(root_dir, video_dir, fileid + ".mp4")
-    subpath = os.path.join(root_dir, subtitle_dir, fileid + ".en.vtt")
-
     # split sections by video only
     capture = cv2.VideoCapture(videopath)
     fps = capture.get(cv2.CAP_PROP_FPS)
@@ -257,6 +255,7 @@ def extract_keyframes(fileid: str,
         for idx, frame_index in enumerate(keyframes_with_text["keyframes"][section_idx]):
             keyframes_with_text["keyframes"][section_idx][idx] = seek_frame_by_idx(capture, frame_index)
 
+    fileid = os.path.basename(subpath).split(".")[0]
     test_segmentation(fileid, section_keyframes, keyframes_with_text)
     return section_keyframes, keyframes_with_text
 
@@ -291,7 +290,10 @@ def batched_extract(dest_dir: str,
         keyframe_save_file = os.path.join(save_dir, fileid + ".keyframes.pkl")
 
         try:
-            sections, keyframes_with_text = extract_keyframes(fileid,
+            subpath = os.path.join(root_dir, subtitle_dir, fileid + ".en.vtt")
+            videopath = os.path.join(root_dir, video_dir, fileid + ".mp4")
+            sections, keyframes_with_text = extract_keyframes(subpath,
+                                                              videopath,
                                                               edge_length=edge_length,
                                                               background_threshold=background_threshold,
                                                               minus_threshold=minus_threshold,

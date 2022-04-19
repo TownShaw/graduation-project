@@ -157,6 +157,30 @@ def iter_batch_data(batch: dict, max_item_num: int):
         mini_batch = {"images": [], "subtitles": [], "lens": [], "labels": [], "segments": [], "image_segments": []}
 
 
+def get_labels_by_threshold(scores: np.ndarray, index2know: dict, threshold: float):
+    """
+    get predicted label idices & names according to scores and threshold
+    """
+    predict_labels = (scores >= threshold).astype(np.int32)
+    predict_labels_indices = np.argsort(predict_labels, axis=1)[:, ::-1]
+    batch_size = scores.shape[0]
+    labels_indices = [sorted(predict_labels_indices[idx][:np.sum(predict_labels[idx])].tolist()) for idx in range(batch_size)]
+    labels_names = [[index2know[index] for index in indices] for indices in labels_indices]
+    return labels_indices, labels_names
+
+
+def get_labels_by_topK(scores: np.ndarray, index2know: dict, topK: int):
+    """
+    get predicted label idices & names according to scores and topK
+    """
+    assert topK > 0, "topK MUST greater than 0!"
+    predict_labels_indices = np.argsort(scores, axis=1)[:, ::-1]
+    batch_size = scores.shape[0]
+    labels_indices = [sorted(predict_labels_indices[idx][:topK].tolist()) for idx in range(batch_size)]
+    labels_names = [[index2know[index] for index in indices] for indices in labels_indices]
+    return labels_indices, labels_names
+
+
 def metric(predicts: np.ndarray, labels: np.ndarray, threshold: float, num_classes_list: list):
     """
     不考虑层级结构的 metric
