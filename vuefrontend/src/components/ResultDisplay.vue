@@ -23,11 +23,13 @@ export default {
   beforeUpdate() {
     this.sections = this.jsonData.sections
     this.section_labels = this.jsonData.section_labels
-    this.video_labels = this.jsonData.video_labels
+    this.video_labels = this.jsonData.video_labels[0]
   },
 }
 </script>
 
 <style>
-
+li {
+  text-align: left;
+}
 </style>
