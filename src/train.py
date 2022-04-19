@@ -45,16 +45,17 @@ def train(config: dict):
                                                              collate_fn=collate_fn)
 
     best_f1 = 0.0
-    model = HARNN(config, len(word2idx), pretrained_label_embedding=pretrained_embedding).to(config["device"])
+    model = HARNN(config, len(word2idx), pretrained_label_embedding=pretrained_embedding)
     model_save_path = os.path.join(config["data"]["model_save_dir"], config["data"]["model_name"])
     if not os.path.isdir(config["data"]["model_save_dir"]):
         os.mkdir(config["data"]["model_save_dir"])
     if os.path.isfile(model_save_path):
         logger.info("Loading model from {} ...".format(model_save_path))
-        checkpoint = torch.load(model_save_path)
+        checkpoint = torch.load(model_save_path, map_location="cpu")
         model.load_state_dict(checkpoint["model_state_dict"])
         best_f1 = checkpoint["best_f1"]
     logger.info("Best-F1: {}".format(best_f1))
+    model = model.to(config["device"])
 
     optim = torch.optim.Adam(model.parameters(), lr=config["model"]["learning_rate"])
     loss_fn = HierarchyLossWithSegments()
@@ -164,6 +165,6 @@ if __name__ == "__main__":
     torch.manual_seed(2022)
 
     config_dir = "config"
-    config_file = "model.train.yaml"
+    config_file = "HARNN.Khan.yaml"
     config = yaml.load(open(os.path.join(config_dir, config_file), "r", encoding="utf-8"), Loader=yaml.FullLoader)
     train(config=config)

@@ -17,7 +17,7 @@ class EmbeddingLayer(torch.nn.Module):
     def __init__(self, word_num, embedding_dim, pretrained_word_matrix=None):
         super(EmbeddingLayer, self).__init__()
         self.embedding = torch.nn.Embedding(word_num, embedding_dim)
-        if pretrained_word_matrix:
+        if pretrained_word_matrix is not None:
             self.embedding.weight.data = torch.from_numpy(pretrained_word_matrix)
         else:
             xavier_normal_(self.embedding.weight.data)
