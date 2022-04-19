@@ -1,7 +1,7 @@
 <template>
-  <div v-if="!sections && sections.length() != 0">
+  <div v-if="sections && sections.length != 0">
     <p>{{ this.video_labels }}</p>
-    <li v-for="idx of section_labels.length()" :key="idx">{{ sections[idx - 1] }} ~ {{ sections[idx] }}: {{ section_labels[idx - 1] }}</li>
+    <li v-for="idx of section_labels.length" :key="idx">{{ sections[idx - 1] }} ~ {{ sections[idx] }}: {{ section_labels[idx - 1] }}</li>
   </div>
 </template>
 
@@ -21,9 +21,9 @@ export default {
     }
   },
   beforeUpdate() {
-    this.sections = this.jsonData["sections"]
-    this.section_labels = this.jsonData["section_labels"]
-    this.video_labels = this.jsonData["video_labels"]
+    this.sections = this.jsonData.sections
+    this.section_labels = this.jsonData.section_labels
+    this.video_labels = this.jsonData.video_labels
   },
 }
 </script>

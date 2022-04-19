@@ -1,28 +1,27 @@
 <template>
   <div id="main">
-    <VideoPost/>
-    <!-- <VideoPost @result-change="getJsonData"/> -->
-    <!-- <ResultDisplay :json-data="this.jsonData"/> -->
+    <VideoPost @result-change="getJsonData"/>
+    <ResultDisplay :json-data="jsonData"/>
   </div>
 </template>
 
 <script>
 import VideoPost from "../components/VideoPost.vue"
-// import ResultDisplay from "../components/ResultDisplay.vue"
+import ResultDisplay from "../components/ResultDisplay.vue"
 
 export default {
   name: "Main",
   data() {
 		return {
-      jsonData: undefined
+      jsonData: {}
     }
   },
   components: {
-		VideoPost
-    // ResultDisplay
+		VideoPost,
+    ResultDisplay
   },
   methods: {
-    getJsonData(event, data) {
+    getJsonData(data) {
       this.jsonData = data
     }
   },
