@@ -7,10 +7,11 @@
 '''
 
 import os
+import cv2
 import json
+import datetime
 from tornado import web, ioloop
 from predict import static_load, predict
-from requests_toolbelt.multipart import decoder
 
 
 class MainHandler(web.RequestHandler):
@@ -29,31 +30,27 @@ class MainHandler(web.RequestHandler):
         if not os.path.isdir(tmp_dir):
             os.mkdir(tmp_dir)
 
-        req_data = self.request.body
-        content_type = self.request.headers._dict["Content-Type"]
-        multipart_data = decoder.MultipartDecoder(req_data, content_type)
-        dataset_name = "Khan"
+        dataset_name = self.request.arguments["datasetName"][0].decode("utf-8")
+        video_content = self.request.files["video"][0]["body"]
+        sub_content = self.request.files["subtitle"][0]["body"]
+
         subfile = os.path.join(tmp_dir, "temp.vtt")
         videofile = os.path.join(tmp_dir, "temp.mp4")
-        for part in multipart_data.parts:
-            content_type = ""
-            for k, v in part.headers.items():
-                if k.decode("utf-8") == "Content-Type":
-                    content_type = v.decode("utf-8")
-            content_type = content_type.split("/")[0]
-            if content_type != "text":
-                fvideo = open(videofile, "wb")
-                fvideo.write(part.content)
-                fvideo.close()
-            else:
-                fvtt = open(subfile, "w")
-                fvtt.write(part.content.decode("utf-8"))
-                fvtt.close()
+
+        fvtt = open(subfile, "w")
+        fvtt.write(sub_content.decode("utf-8"))
+        fvideo = open(videofile, "wb")
+        fvideo.write(video_content)
+        fvtt.close()
+        fvideo.close()
+
         sections, section_labels_names, video_labels_names = [], [], []
         try:
             sections, section_labels_names, video_labels_names = predict(meta_data, dataset_name, subfile, videofile)
         except Exception:
             pass
+        fps = cv2.VideoCapture(videofile).get(cv2.CAP_PROP_FPS)
+        sections = [str(datetime.timedelta(seconds=int(timestamp / fps + 0.5))) for timestamp in sections]
         os.remove(subfile)
         os.remove(videofile)
         self.write(json.dumps({"sections": sections, "section_labels": section_labels_names, "video_labels": video_labels_names}, ensure_ascii=False))
