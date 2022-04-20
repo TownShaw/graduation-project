@@ -32,7 +32,7 @@ export default {
 
 <style>
 div {
-  margin-left: 10%;
-  margin-right: 10%;
+  margin-left: 5%;
+  margin-right: 5%;
 }
 </style>
