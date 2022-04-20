@@ -7,6 +7,7 @@
 '''
 
 import os
+import sys
 import cv2
 import json
 import datetime
@@ -47,7 +48,8 @@ class MainHandler(web.RequestHandler):
         sections, section_labels_names, video_labels_names = [], [], []
         try:
             sections, section_labels_names, video_labels_names = predict(meta_data, dataset_name, subfile, videofile)
-        except Exception:
+        except Exception as e:
+            print(e, file=sys.stderr)
             pass
         fps = cv2.VideoCapture(videofile).get(cv2.CAP_PROP_FPS)
         sections = [str(datetime.timedelta(seconds=int(timestamp / fps + 0.5))) for timestamp in sections]

@@ -78,12 +78,19 @@ def predict(meta_data: dict, dataset_name: str, subfile: str, videofile: str):
 
     section_scores, video_scores = meta_data[dataset_name]["model"](images, (subtitles, lens), segment, image_segment)
 
-    section_labels_indices, section_labels_names = get_labels_by_threshold(section_scores.cpu().detach().numpy(),
-                                                                           index2know=meta_data[dataset_name]["index2know"],
-                                                                           threshold=meta_data[dataset_name]["config"]["model"]["threshold"])
-    video_labels_indices, video_labels_names = get_labels_by_threshold(video_scores.cpu().detach().numpy(),
-                                                                       index2know=meta_data[dataset_name]["index2know"],
-                                                                       threshold=meta_data[dataset_name]["config"]["model"]["threshold"])
+    section_labels_indices, section_labels_names = get_hierarchy_labels_by_threshold(section_scores.cpu().detach().numpy(),
+                                                                                     index2know=meta_data[dataset_name]["index2know"],
+                                                                                     num_classes_list=config["data"]["num_classes_list"],
+                                                                                     threshold=meta_data[dataset_name]["config"]["model"]["threshold"])
+    video_labels_indices, video_labels_names = get_hierarchy_labels_by_threshold(video_scores.cpu().detach().numpy(),
+                                                                                 index2know=meta_data[dataset_name]["index2know"],
+                                                                                 num_classes_list=config["data"]["num_classes_list"],
+                                                                                 threshold=meta_data[dataset_name]["config"]["model"]["threshold"])
+
+    # process the results to fit frontend
+    section_labels_names = [[[label, level] for level in section_labels_names.keys() for label in section_labels_names[level][section_idx]] \
+                            for section_idx in range(len(section_labels_names[0]))]
+    video_labels_names = [[label, level] for level in video_labels_names.keys() for label in video_labels_names[level][0]]
     return sections, section_labels_names, video_labels_names
 
 

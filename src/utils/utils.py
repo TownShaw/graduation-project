@@ -157,19 +157,54 @@ def iter_batch_data(batch: dict, max_item_num: int):
         mini_batch = {"images": [], "subtitles": [], "lens": [], "labels": [], "segments": [], "image_segments": []}
 
 
-def get_labels_by_threshold(scores: np.ndarray, index2know: dict, threshold: float):
+def get_labels_by_threshold(scores: np.ndarray, index2know: dict, threshold: float, offset: int=0):
     """
     get predicted label idices & names according to scores and threshold
+
+    offset for get_hierarchy_labels_by_threshold(), default to 0
     """
     predict_labels = (scores >= threshold).astype(np.int32)
     predict_labels_indices = np.argsort(predict_labels, axis=1)[:, ::-1]
     batch_size = scores.shape[0]
-    labels_indices = [sorted(predict_labels_indices[idx][:np.sum(predict_labels[idx])].tolist()) for idx in range(batch_size)]
+    labels_indices = [sorted((predict_labels_indices[idx][:np.sum(predict_labels[idx])] + offset).tolist()) for idx in range(batch_size)]
     labels_names = [[index2know[index] for index in indices] for indices in labels_indices]
     return labels_indices, labels_names
 
 
-def get_labels_by_topK(scores: np.ndarray, index2know: dict, topK: int):
+def get_labels_by_topK(scores: np.ndarray, index2know: dict, topK: int, offset: int=0):
+    """
+    get predicted label idices & names according to scores and topK
+
+    offset for get_hierarchy_labels_by_topK(), default to 0
+    """
+    assert topK > 0, "topK MUST greater than 0!"
+    predict_labels_indices = np.argsort(scores, axis=1)[:, ::-1]
+    batch_size = scores.shape[0]
+    labels_indices = [sorted((predict_labels_indices[idx][:topK] + offset).tolist()) for idx in range(batch_size)]
+    labels_names = [[index2know[index] for index in indices] for indices in labels_indices]
+    return labels_indices, labels_names
+
+
+def get_hierarchy_labels_by_threshold(scores: np.ndarray, index2know: dict, num_classes_list: list, threshold: float):
+    """
+    get predicted label idices & names according to scores and threshold
+    """
+    predict_labels = (scores >= threshold).astype(np.int32)
+    start_idx, end_idx = 0, 0
+    hierarchy_indices, hierarchy_labels = {}, {}
+    for level, classes in enumerate(num_classes_list):
+        start_idx = end_idx
+        end_idx += classes
+        level_indices, level_labels = get_labels_by_threshold(predict_labels[:, start_idx:end_idx],
+                                                              index2know=index2know,
+                                                              threshold=threshold,
+                                                              offset=start_idx)
+        hierarchy_indices[level] = level_indices
+        hierarchy_labels[level] = level_labels
+    return hierarchy_indices, hierarchy_labels
+
+
+def get_hierarchy_labels_by_topK(scores: np.ndarray, index2know: dict, topK: int):
     """
     get predicted label idices & names according to scores and topK
     """
