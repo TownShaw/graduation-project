@@ -151,15 +151,13 @@ def split_sections(capture, edge_length: int=20, background_threshold: int=15, m
     return keyframes
 
 
-def extract_keyframes(fileid: str,
+def extract_keyframes(subpath: str,
+                      videopath: str,
                       edge_length: int=20,
                       background_threshold: int=15,
                       minus_threshold: int=2000,
                       max_seq_len: int=200,
                       max_section_num: int=8) -> tuple:
-    videopath = os.path.join(root_dir, video_dir, fileid + ".mp4")
-    subpath = os.path.join(root_dir, subtitle_dir, fileid + ".en.vtt")
-
     # split sections by video only
     capture = cv2.VideoCapture(videopath)
     fps = capture.get(cv2.CAP_PROP_FPS)
@@ -199,12 +197,12 @@ def extract_keyframes(fileid: str,
         except IndexError:
             break
 
-        if len(tmp_sub.split()) + len(sub_segments[segment_idx]["text"].split()) <= max_seq_len and sub_segments[segment_idx]["end"] <= section_keyframes[section_idx + 1]:
+        if len(tmp_sub.split()) + len(sub_segments[segment_idx]["text"].split()) <= max_seq_len and sub_segments[segment_idx]["end"] < section_keyframes[section_idx + 1]:
             tmp_sub += ' ' + sub_segments[segment_idx]["text"]
             segment_idx += 1
             continue
         # segment 末端已超过现在的 section 末端
-        if sub_segments[segment_idx]["end"] > section_keyframes[section_idx + 1]:
+        if sub_segments[segment_idx]["end"] >= section_keyframes[section_idx + 1]:
             keyframes.append(section_keyframes[section_idx + 1])
             # 若该 segment 并未全在下一个 section 中, 则将对应的字幕文本算在现在的 section 中
             if not sub_segments[segment_idx]["start"] >= section_keyframes[section_idx + 1]:
@@ -257,6 +255,7 @@ def extract_keyframes(fileid: str,
         for idx, frame_index in enumerate(keyframes_with_text["keyframes"][section_idx]):
             keyframes_with_text["keyframes"][section_idx][idx] = seek_frame_by_idx(capture, frame_index)
 
+    fileid = os.path.basename(subpath).split(".")[0]
     test_segmentation(fileid, section_keyframes, keyframes_with_text)
     return section_keyframes, keyframes_with_text
 
@@ -291,7 +290,10 @@ def batched_extract(dest_dir: str,
         keyframe_save_file = os.path.join(save_dir, fileid + ".keyframes.pkl")
 
         try:
-            sections, keyframes_with_text = extract_keyframes(fileid,
+            subpath = os.path.join(root_dir, subtitle_dir, fileid + ".en.vtt")
+            videopath = os.path.join(root_dir, video_dir, fileid + ".mp4")
+            sections, keyframes_with_text = extract_keyframes(subpath,
+                                                              videopath,
                                                               edge_length=edge_length,
                                                               background_threshold=background_threshold,
                                                               minus_threshold=minus_threshold,
@@ -320,7 +322,7 @@ if __name__ == "__main__":
 
     # test case
     # fileid = "Nue0DINMRPM"
-    # fileid = "DfO27juYly8"
+    # fileid = "0nKP1FdSzEg"
     # sections, keyframes = extract_keyframes(fileid, edge_length, background_threshold, minus_threshold, max_seq_len, max_section_num)
     # print("Done.")
 
@@ -347,7 +349,7 @@ if __name__ == "__main__":
         fileids.remove(fileid)
 
     # 需要自定义分段 ids 在下面定义, 将上面直接全部注释即可
-    # fileids = ["00fgAG6VrRQ"]
+    # fileids = ["Onkd8tChC2A"]
 
     processes = 8
     random.seed(2022)
