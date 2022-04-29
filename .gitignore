@@ -26,7 +26,20 @@ latex/
 
 # models
 models/
+# symbolic link
+models
 
 
 # logs
 logs/
+
+
+# &*%$#@ in vuefrontend
+vuefrontend/**/*.png
+vuefrontend/**/*.jpg
+vuefrontend/package-lock.json
+
+
+# ignore some baseline
+baseline/GCN/
+baseline/HiAGM/
