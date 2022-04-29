@@ -21,21 +21,21 @@ class mySequential(torch.nn.Sequential):
 
 
 class TCA(torch.nn.Module):
-    def __init__(self, word_fearture_dim, image_feature_dim, label_feature_dim, num_classes):
+    def __init__(self, word_feature_dim, image_feature_dim, label_feature_dim, num_classes):
         super(TCA, self).__init__()
-        self.linear_label = torch.nn.Linear(word_fearture_dim, label_feature_dim, bias=False)
-        self.linear_image = torch.nn.Linear(word_fearture_dim, image_feature_dim, bias=False)
+        self.linear_label = torch.nn.Linear(word_feature_dim, label_feature_dim, bias=False)
+        self.linear_image = torch.nn.Linear(word_feature_dim, image_feature_dim, bias=False)
         self.S_h = torch.nn.parameter.Parameter(xavier_normal_(torch.randn(num_classes, label_feature_dim)).type(torch.float32), requires_grad=True)
 
     def forward(self, image_x, word_x, last_w):
         V_h = torch.multiply(last_w, word_x)
-        class_O_h = self.linear_label(V_h).transpose(1, 2)
+        class_O_h = torch.tanh(self.linear_label(V_h).transpose(1, 2))
         class_attention_matrix = torch.matmul(self.S_h, class_O_h)
         class_attention_weight = torch.softmax(class_attention_matrix, dim=-1)
         class_attention_out = torch.matmul(class_attention_weight, V_h)
         class_output = torch.mean(class_attention_out, dim=1)
 
-        image_O_h = self.linear_image(V_h).transpose(1, 2)
+        image_O_h = torch.tanh(self.linear_image(V_h).transpose(1, 2))
         image_attention_matrix = torch.matmul(image_x.unsqueeze(1), image_O_h)
         image_attention_weight = torch.softmax(image_attention_matrix, dim=-1)
         image_attention_out = torch.matmul(image_attention_weight, V_h)
@@ -61,7 +61,7 @@ class CDM(torch.nn.Module):
         self.rnn_hidden_dim = rnn_hidden_dim
 
     def forward(self, P_L, atttention_weight):
-        K_h = torch.mean(torch.mul(atttention_weight, P_L.unsqueeze(-1)), dim=1)
+        K_h = torch.mean(torch.multiply(atttention_weight, P_L.unsqueeze(-1)), dim=1)
         w_h = K_h.unsqueeze(-1).repeat(1, 1, 2 * self.rnn_hidden_dim)
         return w_h
 

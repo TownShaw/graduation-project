@@ -19,6 +19,12 @@ from dataset import KhanDataset, collate_fn
 from harnn import HARNN, HierarchyLossWithSegments
 
 
+def set_seed(seed):
+    torch.manual_seed(seed)
+    torch.random.seed(seed)
+    np.random.seed(seed)
+
+
 def train(config: dict):
     logger = utils.getLogger(config["log"]["log_dir"], name=config["log"]["name"])
 
@@ -162,7 +168,7 @@ def train(config: dict):
 
 
 if __name__ == "__main__":
-    torch.manual_seed(2022)
+    set_seed(2022)
 
     config_dir = "config"
     config_file = "HARNN.Khan.yaml"
