@@ -6,10 +6,6 @@
 
 '''
 
-import os
-import sys
-import tqdm
-import yaml
 import torch
 from torch.nn.init import xavier_normal_
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
@@ -90,24 +86,24 @@ class HMCN_F(torch.nn.Module):
     def __init__(self, config: dict):
         super(HMCN_F, self).__init__()
         self.alpha = config["HMCN-F"]["alpha"]
-        self.word_embedding_dim = config["HMCN-F"]["word_embedding_dim"]
+        self.rnn_dim = config["HMCN-F"]["rnn_dim"]
         self.hidden_dim = config["HMCN-F"]["hidden_dim"]
         self.feature_dim = config["HMCN-F"]["feature_dim"]
         self.num_classes = config["data"]["num_classes"]
         self.num_classes_list = config["data"]["num_classes_list"]
         self.network = []
-        for idx in range(self.num_classes_list):
+        for idx in range(len(self.num_classes_list)):
             if idx == 0:
-                self.network.append(ForwardUnit(self.word_embedding_dim, self.hidden_dim, self.feature_dim, self.num_classes_list[idx]))
+                self.network.append(ForwardUnit(2 * self.rnn_dim, self.hidden_dim, self.feature_dim, self.num_classes_list[idx]))
             else:
-                self.network.append(ForwardUnit(self.word_embedding_dim + self.hidden_dim, self.hidden_dim, self.feature_dim, self.num_classes_list[idx]))
+                self.network.append(ForwardUnit(2 * self.rnn_dim + self.hidden_dim, self.hidden_dim, self.feature_dim, self.num_classes_list[idx]))
         self.network = mySequential(*self.network)
         self.linear = torch.nn.Linear(self.hidden_dim, self.num_classes)
 
     def forward(self, input_x):
         local_scores_list = []
         _, global_feature, local_scores_list = self.network(input_x,
-                                                            torch.FloatTensor(),
+                                                            torch.FloatTensor().to(input_x.device),
                                                             local_scores_list)
         local_scores = torch.cat(local_scores_list, dim=-1)
         global_scores = torch.sigmoid(self.linear(global_feature))
@@ -140,37 +136,33 @@ class HMCN_R(torch.nn.Module):
         self.alpha = config["HMCN-R"]["alpha"]
         self.batch_size = config["HMCN-R"]["batch_size"]
         self.max_seq_len = config["HMCN-R"]["max_seq_len"]
-        self.word_embedding_dim = config["HMCN-R"]["word_embedding_dim"]
+        self.rnn_dim = config["HMCN-R"]["rnn_dim"]
         self.hidden_dim = config["HMCN-R"]["hidden_dim"]
         self.num_classes = config["data"]["num_classes"]
-        self.num_classes_list = config["HMCN-R"]["num_classes_list"]
+        self.num_classes_list = config["data"]["num_classes_list"]
 
-        self.recurrent = RecurrentUnit(self.word_embedding_dim + self.hidden_dim, self.hidden_dim)
-        self.global_out = torch.nn.Linear(self.word_embedding_dim + self.hidden_dim, self.num_classes)
+        self.recurrent = RecurrentUnit(2 * self.rnn_dim + self.hidden_dim, self.hidden_dim)
+        self.global_out = torch.nn.Linear(2 * self.rnn_dim + self.hidden_dim, self.num_classes)
         self.local_out_nets = [torch.nn.Linear(self.hidden_dim, self.num_classes_list[idx]) for idx in range(len(self.num_classes_list))]
-        self.hidden_state = torch.nn.parameter.Parameter(
-            xavier_normal_(torch.randn(self.batch_size, self.max_seq_len, self.hidden_dim)).type(torch.float32),
-            requires_grad=True)
-        self.memory_cell = torch.nn.parameter.Parameter(
-            xavier_normal_(torch.randn(self.batch_size, self.max_seq_len, self.hidden_dim)).type(torch.float32),
-            requires_grad=True)
 
     def forward(self, input_x):
+        self.local_out_nets = [net.to(input_x.device) for net in self.local_out_nets]
         local_scores_list = []
 
+        hidden_state = torch.zeros(input_x.shape[0], self.hidden_dim, dtype=torch.float32).to(input_x.device)
+        memory_cell = torch.zeros(input_x.shape[0], self.hidden_dim, dtype=torch.float32).to(input_x.device)
         for level in range(len(self.num_classes_list)):
-            input_x, self.hidden_state, self.memory_cell = self.recurrent(input_x, self.hidden_state, self.memory_cell)
-            scores = torch.sigmoid(self.local_out_nets[level](self.hidden_state))
+            input_x, hidden_state, memory_cell = self.recurrent(input_x, hidden_state, memory_cell)
+            scores = torch.sigmoid(self.local_out_nets[level](hidden_state))
             local_scores_list.append(scores)
         local_scores = torch.cat(local_scores_list, dim=-1)
-        global_scores = torch.sigmoid(self.global_out(torch.cat(input_x, self.hidden_state, dim=-1)))
+        global_scores = torch.sigmoid(self.global_out(torch.cat([input_x, hidden_state], dim=-1)))
         final_scores = (1 - self.alpha) * local_scores + self.alpha * global_scores
         return final_scores
 
 
 class HMCN(torch.nn.Module):
-    def __init__(self, config, model_name, num_words,
-                 pretrained_word_embedding=None, pretrained_label_embedding=None):
+    def __init__(self, config, model_name, num_words, pretrained_word_embedding=None):
         super().__init__()
         MODELS = {
             "HMCN-F": HMCN_F,
@@ -178,14 +170,14 @@ class HMCN(torch.nn.Module):
         }
 
         self.embedding = EmbeddingLayer(word_num=num_words,
-                                        embedding_dim=config["model"]["word_embedding_dim"],
+                                        embedding_dim=config[model_name]["word_embedding_dim"],
                                         pretrained_word_matrix=pretrained_word_embedding)
 
-        self.bi_rnn = BiRNNLayer(in_dim=config["model"]["word_embedding_dim"],
-                                 hidden_dim=config["model"]["rnn_dim"],
-                                 num_layers=config["model"]["rnn_num_layers"],
-                                 dropout=config["model"]["dropout"])
-        self.hmcn = MODELS[model_name]
+        self.bi_rnn = BiRNNLayer(in_dim=config[model_name]["word_embedding_dim"],
+                                 hidden_dim=config[model_name]["rnn_dim"],
+                                 num_layers=config[model_name]["rnn_num_layers"],
+                                 dropout=config[model_name]["dropout"])
+        self.hmcn = MODELS[model_name](config)
 
     def forward(self, text_record, segments):
         text_pad, lens = text_record
@@ -198,6 +190,6 @@ class HMCN(torch.nn.Module):
         for video in segments:
             start_idx = end_idx
             end_idx += sum(video)
-            video_final_scores.append(torch.max(final_scores[start_idx:end_idx], dim=0))
+            video_final_scores.append(torch.max(final_scores[start_idx:end_idx], dim=0)[0])
         video_final_scores = torch.stack(video_final_scores, dim=0)
         return video_final_scores

@@ -109,7 +109,7 @@ def load_khan_data_by_id(filepath: str,
 
     subtitles, lens = [], []
     data = pickle.load(open(filepath, "rb"))
-    subtitles = data["keyframes"], data["subtitles"]
+    subtitles = data["subtitles"]
     lens = []
     for idx, section_subtitles in enumerate(subtitles):
         section_subtitles, section_lens = tokenize_and_pad(section_subtitles, stopwords, word2idx, max_seq_len=max_seq_len, pad_word=pad_word)
@@ -122,7 +122,7 @@ def iter_batch_data(batch: dict, max_item_num: int):
     """
     
     """
-    subtitles, lens, labels, segments = batch["subtitles"], batch["lens"], batch["labels"]
+    subtitles, lens, labels, segments = batch["subtitles"], batch["lens"], batch["labels"], batch["segments"]
     mini_batch = {"subtitles": [], "lens": [], "labels": [], "segments": []}
     segment_num_per_video = [sum(segments[idx]) for idx in range(len(segments))]
     index = 0

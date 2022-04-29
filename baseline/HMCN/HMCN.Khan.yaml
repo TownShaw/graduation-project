@@ -23,8 +23,10 @@ HMCN-F:
   pad_word: <unk>
   max_seq_len: 300
   word_embedding_dim: 100
-  hidden_dim: 200
-  feature_dim: 200
+  rnn_dim: 256
+  rnn_num_layers: 1
+  hidden_dim: 256
+  feature_dim: 256
   learning_rate: 0.001
   alpha: 0.5
   dropout: 0.5
@@ -36,10 +38,12 @@ HMCN-R:
   pad_word: <unk>
   max_seq_len: 300
   word_embedding_dim: 100
-  hidden_dim: 200
+  rnn_dim: 256
+  rnn_num_layers: 1
+  hidden_dim: 256
   learning_rate: 0.001
   alpha: 0.5
   dropout: 0.5
   threshold: 0.5
 
-device: "cuda:0"
+device: "cuda:1"

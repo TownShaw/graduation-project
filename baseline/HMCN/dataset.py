@@ -11,11 +11,11 @@ import torch
 import pickle
 import numpy as np
 from torch.utils.data import Dataset
-from HMCN.utils import get_stopwords, load_khan_data_by_id
+from utils import get_stopwords, load_khan_data_by_id
 
 
 class KhanDataset(Dataset):
-    def __init__(self, config: dict, fileids: list, word2idx: dict, model_name: str) -> None:
+    def __init__(self, config: dict, model_name: str, fileids: list, word2idx: dict) -> None:
         super(KhanDataset, self).__init__()
         self.config = config
         self.word2idx = word2idx
