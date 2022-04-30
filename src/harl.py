@@ -69,7 +69,7 @@ class CDM(torch.nn.Module):
 class HAM(torch.nn.Module):
     def __init__(self, rnn_hidden_dim, image_feature_dim, label_embedding_dim, fc_dim, num_classes):
         super(HAM, self).__init__()
-        self.tca = TCA(word_fearture_dim=2 * rnn_hidden_dim,
+        self.tca = TCA(word_feature_dim=2 * rnn_hidden_dim,
                        image_feature_dim=image_feature_dim,
                        label_feature_dim=label_embedding_dim,
                        num_classes=num_classes)
