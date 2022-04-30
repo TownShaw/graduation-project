@@ -9,7 +9,7 @@
 import torch
 import torch.nn.functional as F
 from torch.nn.init import xavier_normal_
-from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
+from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence, pad_sequence
 
 
 class EmbeddingLayer(torch.nn.Module):
@@ -53,16 +53,15 @@ class CNN3D(torch.nn.Module):
         super(CNN3D, self).__init__()
         self.out_channel = out_channel
         self.kernel_size_list = kernel_size_list
-        self.cnn_3d = torch.nn.Conv3d(3, out_channel, (3, 7, 7))
+        # iuput: torch.Size([batch_size, 3, 16, 224, 224])
+        # output: torch.Size([batch_size, 100, 14, 218, 218])
+        self.cnn_3d = torch.nn.Conv3d(3, out_channel, (3, 7, 7), padding=(1, 3, 3), stride=(1, 2, 2))
         self.dropout = torch.nn.Dropout(dropout)
 
     def forward(self, image_input):
-        convs_out = self.cnn_3d(image_input)
-        pool_x = F.max_pool1d(convs_out.squeeze(-1), convs_out.size()[3])
-        fc_x = torch.cat(pool_x, dim=1)
-        fc_x = fc_x.squeeze(-1)
-        fc_x = self.dropout(fc_x)
-        return fc_x
+        convs_out = self.cnn_3d(image_input.transpose(1, 2))
+        pool_x = F.max_pool3d(convs_out, (3, 8, 8), stride=(1, 8, 8), padding=(1, 0, 0))
+        return self.dropout(pool_x)
 
 
 class CNN3DLSTM(torch.nn.Module):
@@ -72,23 +71,55 @@ class CNN3DLSTM(torch.nn.Module):
                                         config["model"]["word_embedding_dim"],
                                         pretrained_word_embedding)
 
-        self.bi_rnn = BiRNNLayer(config["model"]["out_channel"],
-                                 config["model"]["word_embedding_dim"],
-                                 config["model"]["kernel_size"],
+        self.bi_rnn = BiRNNLayer(config["model"]["word_embedding_dim"],
+                                 config["model"]["rnn_dim"],
+                                 config["model"]["rnn_num_layers"],
                                  config["model"]["dropout"])
 
-        self.cnn3d = CNN3D(pretrained=True, progress=True)
+        self.cnn3d = CNN3D(out_channel=config["model"]["out_channel"],
+                           kernel_size_list=config["model"]["kernel_size"],
+                           dropout=config["model"]["dropout"])
 
-        self.resnet_outdim = self.resnet.fc.out_features
-        self.linear_out = torch.nn.Linear(self.resnet_outdim + config["model"]["kernel_size"] * config["model"]["out_channel"],
+        self.linear_out = torch.nn.Linear(2 * config["model"]["rnn_dim"] + (14 * 14) * config["model"]["out_channel"],
                                           config["data"]["num_classes"])
 
-    def forward(self, image_input, input_x, segments):
-        image_output = self.resnet(image_input)
+    def forward(self, image_input, text_record, segments, image_segments):
+        start_idx, end_idx = 0, 0
+        batched_images = []
+        pixel_num = image_input.shape[-1] * image_input.shape[-2]
+        for video in image_segments:
+            start_idx = end_idx
+            end_idx += sum(video)
+            batched_images.append(image_input[start_idx:end_idx])
+        batched_images = pad_sequence(batched_images, batch_first=True)
+        batch_max_len = batched_images.shape[1]
+        image_lens = [sum(video) for video in image_segments]
 
+        image_output = self.cnn3d(batched_images)
+
+        image_avg = []
+        for idx, video in enumerate(image_lens):
+            image_avg.append(image_output[idx, :, :video, :, :])
+        image_avg = torch.cat(image_avg, dim=1).transpose(0, 1)
+        image_avg = (image_avg[:-1] + image_avg[1:]) / 2
+
+        # 去掉跨 section 首尾相加的图像特征
+        masked_indices = []
+        offset = 0
+        for video in image_segments:
+            for idx in range(1, len(video) + 1):
+                masked_indices.append(sum(video[:idx]) + offset - 1)
+            offset += sum(video)
+        # 去除最后一个 video 的最后一帧, 因为该帧并没有与来自其他 section 的帧相加
+        masked_indices.pop(-1)
+        mask = torch.BoolTensor([idx not in masked_indices for idx in range(image_avg.shape[0])])
+        image_avg = image_avg[mask]
+        image_avg = image_avg.reshape(image_avg.shape[0], -1)
+
+        input_x, lens = text_record
         embedding_out = self.embedding(input_x)
-        text_output = self.textcnn(embedding_out.unsqueeze(1))
-        logits = self.linear_out(torch.cat([image_output, text_output], dim=-1))
+        rnn_avg = self.bi_rnn(embedding_out, lens)
+        logits = self.linear_out(torch.cat([image_avg, rnn_avg], dim=-1))
         scores = torch.sigmoid(logits)
 
         start_idx, end_idx = 0, 0

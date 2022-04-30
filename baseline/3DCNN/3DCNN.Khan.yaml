@@ -1,5 +1,5 @@
 log:
-  name: HMCN
+  name: 3DCNN
   log_dir: logs
 data:
   name: Khan
@@ -24,6 +24,8 @@ model:
   pad_word: <unk>
   max_seq_len: 300
   word_embedding_dim: 100
+  rnn_dim: 256
+  rnn_num_layers: 1
   out_channel: 100
   kernel_size: [2, 3, 4]
   learning_rate: 0.001

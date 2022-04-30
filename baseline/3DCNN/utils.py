@@ -15,7 +15,7 @@ import numpy as np
 from gensim.utils import tokenize
 from collections import OrderedDict
 
-def getLogger(log_dir: str, model_name: str, name: str="log") -> logging.Logger:
+def getLogger(log_dir: str, name: str="log") -> logging.Logger:
     """
     @param: log_dir: directory to save log files
     @param: name: logger name
@@ -25,7 +25,7 @@ def getLogger(log_dir: str, model_name: str, name: str="log") -> logging.Logger:
         os.makedirs(log_dir)
 
     now = datetime.datetime.now()
-    filename = "TextCNN_{}.log".format(now.strftime("%Y-%m-%d_%H:%M:%S"))
+    filename = "3DCNN_{}.log".format(now.strftime("%Y-%m-%d_%H:%M:%S"))
     formatter = logging.Formatter(fmt="%(asctime)s - %(filename)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
     file_handler = logging.FileHandler(os.path.join(log_dir, filename), mode="w", encoding="utf-8")
     stream_handler = logging.StreamHandler()
@@ -107,15 +107,15 @@ def load_khan_data_by_id(filepath: str,
     if pad_word not in word2idx:
         raise KeyError("'{0}' is not in word2idx!".format(pad_word))
 
-    subtitles, lens = [], []
+    images, subtitles, lens = [], [], []
     data = pickle.load(open(filepath, "rb"))
-    subtitles = data["subtitles"]
+    images, subtitles = data["keyframes"], data["subtitles"]
     lens = []
     for idx, section_subtitles in enumerate(subtitles):
         section_subtitles, section_lens = tokenize_and_pad(section_subtitles, stopwords, word2idx, max_seq_len=max_seq_len, pad_word=pad_word)
         subtitles[idx] = section_subtitles
         lens.append(section_lens)
-    return subtitles, lens
+    return images, subtitles, lens
 
 
 def iter_batch_data(batch: dict, max_item_num: int):
