@@ -149,8 +149,8 @@ class HMCN_R(torch.nn.Module):
         self.local_out_nets = [net.to(input_x.device) for net in self.local_out_nets]
         local_scores_list = []
 
-        hidden_state = torch.zeros(input_x.shape[0], self.hidden_dim, dtype=torch.float32).to(input_x.device)
-        memory_cell = torch.zeros(input_x.shape[0], self.hidden_dim, dtype=torch.float32).to(input_x.device)
+        hidden_state = xavier_normal_(torch.rand(input_x.shape[0], self.hidden_dim, dtype=torch.float32)).to(input_x.device)
+        memory_cell = xavier_normal_(torch.rand(input_x.shape[0], self.hidden_dim, dtype=torch.float32)).to(input_x.device)
         for level in range(len(self.num_classes_list)):
             input_x, hidden_state, memory_cell = self.recurrent(input_x, hidden_state, memory_cell)
             scores = torch.sigmoid(self.local_out_nets[level](hidden_state))
@@ -163,7 +163,7 @@ class HMCN_R(torch.nn.Module):
 
 class HMCN(torch.nn.Module):
     def __init__(self, config, model_name, num_words, pretrained_word_embedding=None):
-        super().__init__()
+        super(HMCN, self).__init__()
         MODELS = {
             "HMCN-F": HMCN_F,
             "HMCN-R": HMCN_R

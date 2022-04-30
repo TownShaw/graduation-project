@@ -195,7 +195,10 @@ def calculate(TP: int, FP: int, FN: int):
     """
     return precition, recall, f1
     """
-    precision = TP / (TP + FP)
+    if (TP + FP) > 0:
+        precision = TP / (TP + FP)
+    else:
+        precision = 0.0
     recall = TP / (TP + FN)
     f1 = 0.0
     if (precision + recall) > 0:
