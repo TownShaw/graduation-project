@@ -1,5 +1,5 @@
 log:
-  name: HMCN
+  name: TextCNN
   log_dir: logs
 data:
   name: Khan
@@ -20,7 +20,7 @@ data:
 
 model:
   epochs: 20
-  batch_size: 8
+  batch_size: 12
   pad_word: <unk>
   max_seq_len: 300
   word_embedding_dim: 100
@@ -31,4 +31,4 @@ model:
   dropout: 0.5
   threshold: 0.5
 
-device: "cuda:0"
+device: "cuda:1"

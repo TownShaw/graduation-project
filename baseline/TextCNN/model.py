@@ -58,15 +58,28 @@ class ResNetTextCNN(torch.nn.Module):
                                config["model"]["dropout"])
 
         self.resnet_outdim = self.resnet.fc.out_features
-        self.linear_out = torch.nn.Linear(self.resnet_outdim + config["model"]["kernel_size"] * config["model"]["out_channel"],
+        self.linear_out = torch.nn.Linear(self.resnet_outdim + len(config["model"]["kernel_size"]) * config["model"]["out_channel"],
                                           config["data"]["num_classes"])
 
-    def forward(self, image_input, input_x, segments):
-        image_output = self.resnet(image_input)
+    def forward(self, image_input, input_x, segments, image_segments):
+        image_feature = self.resnet(image_input)
+        image_feature = (image_feature[:-1] + image_feature[1:]) / 2
+
+        # 去掉跨 section 首尾相加的图像特征
+        masked_indices = []
+        offset = 0
+        for video in image_segments:
+            for idx in range(1, len(video) + 1):
+                masked_indices.append(sum(video[:idx]) + offset - 1)
+            offset += sum(video)
+        # 去除最后一个 video 的最后一帧, 因为该帧并没有与来自其他 section 的帧相加
+        masked_indices.pop(-1)
+        mask = torch.BoolTensor([idx not in masked_indices for idx in range(image_feature.shape[0])])
+        image_feature = image_feature[mask]
 
         embedding_out = self.embedding(input_x)
         text_output = self.textcnn(embedding_out.unsqueeze(1))
-        logits = self.linear_out(torch.cat([image_output, text_output], dim=-1))
+        logits = self.linear_out(torch.cat([image_feature, text_output], dim=-1))
         scores = torch.sigmoid(logits)
 
         start_idx, end_idx = 0, 0

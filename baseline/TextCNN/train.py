@@ -34,7 +34,7 @@ def train(config: dict):
 
     sample_dir = config["data"]["sample_dir"]
     logger.info("Loading data from '{0}'".format(sample_dir))
-    # train_set = ["00fgAG6VrRQ"]
+    # train_set = ["00fgAG6VrRQ", "5wUJLMWZ5Fw"]
     # validation_set = os.listdir("data/samples_test")
     datasets = json.load(open("data/dataset.json"))
     train_set, validation_set = datasets["train_set"], datasets["validation_set"]
@@ -44,7 +44,7 @@ def train(config: dict):
                                                         batch_size=config["model"]["batch_size"],
                                                         shuffle=True,
                                                         collate_fn=collate_fn)
-    khan_dataset_validation = KhanDataset(config, "model", validation_set, word2idx=word2idx)
+    khan_dataset_validation = KhanDataset(config, validation_set, word2idx=word2idx)
     khan_dataloader_validation = torch.utils.data.DataLoader(khan_dataset_validation,
                                                              batch_size=config["model"]["batch_size"],
                                                              shuffle=False,
@@ -66,7 +66,7 @@ def train(config: dict):
     optim = torch.optim.Adam(model.parameters(), lr=config["model"]["learning_rate"])
     loss_fn = torch.nn.BCELoss()
 
-    max_segment_num = 32
+    max_segment_num = 48
     logger.info("Start training ...")
 
     # run an eval epoch before training
@@ -79,8 +79,9 @@ def train(config: dict):
             lens = mini_eval_batch["lens"]
             labels = mini_eval_batch["labels"].to(config["device"])
             segments = mini_eval_batch["segments"]
+            image_segments = mini_eval_batch["image_segments"]
 
-            video_scores = model(images, subtitles, segments)
+            video_scores = model(images, subtitles, segments, image_segments)
             mini_TP, mini_FP, mini_FN = utils.metric(video_scores.cpu().detach().numpy(),
                                                      labels.cpu().detach().numpy(),
                                                      threshold=config["model"]["threshold"],
@@ -101,14 +102,15 @@ def train(config: dict):
         model.train()
         for batch in tqdm.tqdm(khan_dataloader_train):
             for mini_batch in utils.iter_batch_data(batch, max_segment_num):
-                images = mini_eval_batch["images"].to(config["device"])
+                images = mini_batch["images"].to(config["device"])
                 subtitles = mini_batch["subtitles"].to(config["device"])
                 lens = mini_batch["lens"]
                 labels = mini_batch["labels"].to(config["device"])
                 segments = mini_batch["segments"]
+                image_segments = mini_batch["image_segments"]
 
                 optim.zero_grad()
-                video_scores = model(images, subtitles, segments)
+                video_scores = model(images, subtitles, segments, image_segments)
                 loss = loss_fn(video_scores, labels)
                 loss.backward()
                 optim.step()
@@ -145,8 +147,9 @@ def train(config: dict):
                 lens = mini_eval_batch["lens"]
                 labels = mini_eval_batch["labels"].to(config["device"])
                 segments = mini_eval_batch["segments"]
+                image_segments = mini_eval_batch["image_segments"]
 
-                video_scores = model(images, subtitles, segments)
+                video_scores = model(images, subtitles, segments, image_segments)
                 mini_TP, mini_FP, mini_FN = utils.metric(video_scores.cpu().detach().numpy(),
                                                          labels.cpu().detach().numpy(),
                                                          threshold=config["model"]["threshold"],
