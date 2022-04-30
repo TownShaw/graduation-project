@@ -85,7 +85,6 @@ class HARNN(torch.nn.Module):
                                  dropout=config["model"]["dropout"])
 
         self.harl = HARL(rnn_dim=config["model"]["rnn_dim"],
-                         image_feature_dim=self.resnet.fc.out_features,
                          label_embedding_dim=config["model"]["label_embedding_dim"],
                          num_classes_list=config["data"]["num_classes_list"],
                          fc_dim=config["model"]["fc_dim"],
@@ -97,7 +96,7 @@ class HARNN(torch.nn.Module):
         self.video_linear2 = torch.nn.Linear(config["model"]["fc_dim"], config["data"]["num_classes"])
         self.alpha = config["model"]["alpha"]
 
-    def forward(self, text_record, segments, image_segments):
+    def forward(self, text_record, segments):
         text_pad, lens = text_record
         embedding_output = self.embedding(text_pad)
         rnn_out, rnn_avg = self.bi_rnn(embedding_output, lens)

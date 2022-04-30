@@ -21,7 +21,7 @@ from harnn import HARNN, HierarchyLossWithSegments
 
 def set_seed(seed):
     torch.manual_seed(seed)
-    torch.random.seed(seed)
+    torch.cuda.manual_seed(seed)
     np.random.seed(seed)
 
 
@@ -51,7 +51,7 @@ def train(config: dict):
                                                              collate_fn=collate_fn)
 
     best_f1 = 0.0
-    model = HARNN(config, len(word2idx), pretrained_label_embedding=pretrained_embedding)
+    model = HARNN(config, len(word2idx), pretrained_word_embedding=pretrained_embedding)
     model_save_path = os.path.join(config["data"]["model_save_dir"], config["data"]["model_name"])
     if not os.path.isdir(config["data"]["model_save_dir"]):
         os.mkdir(config["data"]["model_save_dir"])
