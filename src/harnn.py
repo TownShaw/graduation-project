@@ -97,27 +97,11 @@ class HARNN(torch.nn.Module):
         self.video_linear2 = torch.nn.Linear(config["model"]["fc_dim"], config["data"]["num_classes"])
         self.alpha = config["model"]["alpha"]
 
-    def forward(self, image_input, text_record, segments, image_segments):
-        # 在同一个 section 之内的图像特征首尾帧相加并 / 2, 作为相应文本段的视频特征
-        image_feature = self.resnet(image_input)
-        image_feature = (image_feature[:-1] + image_feature[1:]) / 2
-
-        # 去掉跨 section 首尾相加的图像特征
-        masked_indices = []
-        offset = 0
-        for video in image_segments:
-            for idx in range(1, len(video) + 1):
-                masked_indices.append(sum(video[:idx]) + offset - 1)
-            offset += sum(video)
-        # 去除最后一个 video 的最后一帧, 因为该帧并没有与来自其他 section 的帧相加
-        masked_indices.pop(-1)
-        mask = torch.BoolTensor([idx not in masked_indices for idx in range(image_feature.shape[0])])
-        image_feature = image_feature[mask]
-
+    def forward(self, text_record, segments, image_segments):
         text_pad, lens = text_record
         embedding_output = self.embedding(text_pad)
         rnn_out, rnn_avg = self.bi_rnn(embedding_output, lens)
-        segments_local_output_list, segments_local_scores_list = self.harl(image_feature, rnn_out, rnn_avg)
+        segments_local_output_list, segments_local_scores_list = self.harl(rnn_out, rnn_avg)
 
         segments_local_scores = torch.cat(segments_local_scores_list, dim=-1)
         segments_local_output = torch.stack(segments_local_output_list, dim=1)

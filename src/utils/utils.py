@@ -124,11 +124,9 @@ def iter_batch_data(batch: dict, max_item_num: int):
     """
     
     """
-    images, subtitles, lens, labels, segments = batch["images"], batch["subtitles"], batch["lens"], batch["labels"], batch["segments"]
-    image_segments = batch["image_segments"]
-    mini_batch = {"images": [], "subtitles": [], "lens": [], "labels": [], "segments": [], "image_segments": []}
+    subtitles, lens, labels, segments = batch["subtitles"], batch["lens"], batch["labels"], batch["segments"]
+    mini_batch = {"subtitles": [], "lens": [], "labels": [], "segments": []}
     segment_num_per_video = [sum(segments[idx]) for idx in range(len(segments))]
-    image_num_per_video = [sum(image_segments[idx]) for idx in range(len(image_segments))]
     index = 0
     while index < len(segments):
     # for idx, segment in enumerate(segments):
@@ -138,23 +136,18 @@ def iter_batch_data(batch: dict, max_item_num: int):
                 or (curr_item_num == 0 and segment_num_per_video[index] > max_item_num)):      # 如果单个 video 的 segment 数量大于 max_item_num 则强行塞进去
             start_idx = sum(segment_num_per_video[:index])
             end_idx = sum(segment_num_per_video[:index + 1])
-            image_start_idx = sum(image_num_per_video[:index])
-            image_end_idx = sum(image_num_per_video[:index + 1])
-            mini_batch["images"].append(images[image_start_idx:image_end_idx])
             mini_batch["subtitles"].append(subtitles[start_idx:end_idx])
             mini_batch["lens"].append(lens[start_idx:end_idx])
             mini_batch["labels"].append(labels[index])
             mini_batch["segments"].append(segments[index])
-            mini_batch["image_segments"].append(image_segments[index])
             curr_item_num += segment_num_per_video[index]
             index += 1
-        mini_batch["images"] = torch.cat(mini_batch["images"], dim=0)
         mini_batch["subtitles"] = torch.cat(mini_batch["subtitles"], dim=0)
         mini_batch["lens"] = torch.cat(mini_batch["lens"], dim=0)
         mini_batch["labels"] = torch.stack(mini_batch["labels"], dim=0)
 
         yield mini_batch
-        mini_batch = {"images": [], "subtitles": [], "lens": [], "labels": [], "segments": [], "image_segments": []}
+        mini_batch = {"subtitles": [], "lens": [], "labels": [], "segments": []}
 
 
 def get_labels_by_threshold(scores: np.ndarray, index2know: dict, threshold: float, offset: int=0):

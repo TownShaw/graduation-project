@@ -74,14 +74,12 @@ def train(config: dict):
     TP, FP, FN = 0, 0, 0
     for eval_batch in tqdm.tqdm(khan_dataloader_validation):
         for mini_eval_batch in utils.iter_batch_data(eval_batch, max_segment_num):
-            images = mini_eval_batch["images"].to(config["device"])
             subtitles = mini_eval_batch["subtitles"].to(config["device"])
             lens = mini_eval_batch["lens"]
             labels = mini_eval_batch["labels"].to(config["device"])
             segments = mini_eval_batch["segments"]
-            image_segments = mini_eval_batch["image_segments"]
 
-            _, video_scores = model(images, (subtitles, lens), segments, image_segments)
+            _, video_scores = model((subtitles, lens), segments)
             mini_TP, mini_FP, mini_FN = utils.metric(video_scores.cpu().detach().numpy(),
                                                      labels.cpu().detach().numpy(),
                                                      threshold=config["model"]["threshold"],
@@ -102,15 +100,13 @@ def train(config: dict):
         model.train()
         for batch in tqdm.tqdm(khan_dataloader_train):
             for mini_batch in utils.iter_batch_data(batch, max_segment_num):
-                images = mini_batch["images"].to(config["device"])
                 subtitles = mini_batch["subtitles"].to(config["device"])
                 lens = mini_batch["lens"]
                 labels = mini_batch["labels"].to(config["device"])
                 segments = mini_batch["segments"]
-                image_segments = mini_batch["image_segments"]
 
                 optim.zero_grad()
-                section_scores, video_scores = model(images, (subtitles, lens), segments, image_segments)
+                section_scores, video_scores = model((subtitles, lens), segments)
                 loss = loss_fn(section_scores, video_scores, labels, segments)
                 loss.backward()
                 optim.step()
@@ -142,14 +138,12 @@ def train(config: dict):
         TP, FP, FN = 0, 0, 0
         for eval_batch in tqdm.tqdm(khan_dataloader_validation):
             for mini_eval_batch in utils.iter_batch_data(eval_batch, max_segment_num):
-                images = mini_eval_batch["images"].to(config["device"])
                 subtitles = mini_eval_batch["subtitles"].to(config["device"])
                 lens = mini_eval_batch["lens"]
                 labels = mini_eval_batch["labels"].to(config["device"])
                 segments = mini_eval_batch["segments"]
-                image_segments = mini_eval_batch["image_segments"]
 
-                _, video_scores = model(images, (subtitles, lens), segments, image_segments)
+                _, video_scores = model((subtitles, lens), segments)
                 mini_TP, mini_FP, mini_FN = utils.metric(video_scores.cpu().detach().numpy(),
                                                          labels.cpu().detach().numpy(),
                                                          threshold=config["model"]["threshold"],
