@@ -27,7 +27,7 @@ def getLogger(log_dir: str, name: str="log") -> logging.Logger:
         os.makedirs(log_dir)
 
     now = datetime.datetime.now()
-    filename = "HARNN_{}.log".format(now.strftime("%Y-%m-%d_%H:%M:%S"))
+    filename = "HARNN_optim1_{}.log".format(now.strftime("%Y-%m-%d_%H:%M:%S"))
     formatter = logging.Formatter(fmt="%(asctime)s - %(filename)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
     file_handler = logging.FileHandler(os.path.join(log_dir, filename), mode="w", encoding="utf-8")
     stream_handler = logging.StreamHandler()

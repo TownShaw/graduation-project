@@ -171,6 +171,6 @@ if __name__ == "__main__":
     set_seed(2022)
 
     config_dir = "config"
-    config_file = "HARNN.Khan.yaml"
+    config_file = "HARNN_optim1.Khan.yaml"
     config = yaml.load(open(os.path.join(config_dir, config_file), "r", encoding="utf-8"), Loader=yaml.FullLoader)
     train(config=config)

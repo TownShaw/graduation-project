@@ -29,18 +29,18 @@ class TCA(torch.nn.Module):
 
     def forward(self, image_x, word_x, last_w):
         V_h = torch.multiply(last_w, word_x)
-        class_O_h = torch.tanh(self.linear_label(V_h).transpose(1, 2))
+
+        image_O_h = torch.tanh(self.linear_image(V_h).transpose(1, 2))
+        image_attention_matrix = torch.matmul(image_x.unsqueeze(1), image_O_h)
+        image_attention_weight = torch.sigmoid(image_attention_matrix)
+        O_h_with_image = torch.multiply(image_attention_weight.transpose(1, 2), V_h)
+
+        class_O_h = torch.tanh(self.linear_label(O_h_with_image).transpose(1, 2))
         class_attention_matrix = torch.matmul(self.S_h, class_O_h)
         class_attention_weight = torch.softmax(class_attention_matrix, dim=-1)
         class_attention_out = torch.matmul(class_attention_weight, V_h)
         class_output = torch.mean(class_attention_out, dim=1)
-
-        image_O_h = torch.tanh(self.linear_image(V_h).transpose(1, 2))
-        image_attention_matrix = torch.matmul(image_x.unsqueeze(1), image_O_h)
-        image_attention_weight = torch.softmax(image_attention_matrix, dim=-1)
-        image_attention_out = torch.matmul(image_attention_weight, V_h)
-        image_output = torch.mean(image_attention_out, dim=1)
-        return class_output, image_output, class_attention_weight
+        return class_output, class_attention_weight
 
 
 class CPM(torch.nn.Module):
@@ -73,12 +73,12 @@ class HAM(torch.nn.Module):
                        image_feature_dim=image_feature_dim,
                        label_feature_dim=label_embedding_dim,
                        num_classes=num_classes)
-        self.cpm = CPM(in_channel=3 * 2 * rnn_hidden_dim + image_feature_dim, hidden_channel=fc_dim, num_classes=num_classes)
+        self.cpm = CPM(in_channel=2 * 2 * rnn_hidden_dim + image_feature_dim, hidden_channel=fc_dim, num_classes=num_classes)
         self.cdm = CDM(rnn_hidden_dim=rnn_hidden_dim)
 
     def forward(self, image_feature, text_feature, text_avg, w_h_last, local_output_list, local_scores_list):
-        r_att, image_att, W_att = self.tca(image_feature, text_feature, w_h_last)
-        cpm_input = torch.cat([r_att, text_avg, image_att, image_feature], dim=-1)
+        r_att, W_att = self.tca(image_feature, text_feature, w_h_last)
+        cpm_input = torch.cat([r_att, text_avg, image_feature], dim=-1)
         A_L, P_L = self.cpm(cpm_input)
         w_h = self.cdm(P_L, W_att)
         local_output_list.append(A_L)
