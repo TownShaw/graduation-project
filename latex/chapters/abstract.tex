@@ -1,0 +1,37 @@
+% !TeX root = ../main.tex
+
+\ustcsetup{
+    keywords = {
+        深度学习，层级多标签分类，多模态
+    },
+    keywords* = {
+        Deep Learning, Hierarchical Classification, Multimodal Learning
+    },
+}
+
+\begin{abstract}
+    随着线上教育模式的兴起，对教育类视频进行知识点预测逐渐成为一个基础而又重要的任务。
+    知识点体系通常可以组织成树状的层级结构，因此对教育视频等资源进行知识点预测本质上是一个多模态的层级多标签分类任务。
+    % 然而现有的教育视频知识点预测方法通常忽略了知识点的层级结构，使得预测结果往往不满足知识点的层级一致性。
+    % 同时，现有的方法也不具有良好的结果可解释性，通常只给出了教育视频所涉及到的知识点，而对于这些知识点出现在视频中的哪些片段并没有给出解释。
+    % 通常教育类视频至少包含视频与字幕文本两种模态的信息，同时视频信息中
+    教育类视频通常具有时长较长、信息密度较大的特点，简单地将整个视频的全量信息输入到深度学习模型中进行预测会造成计算负担过重的问题，
+    而且知识点预测的结果可解释性也不强，即对于这些知识点出现在视频的哪些局部片段并不会给出解释。
+    同时由于教育视频知识点预测的任务本质，如何有效地将视频中的多种模态信息进行结合，如何能够在保证分类性能的同时又尽量满足层级分类的要求，都是我们要面临的挑战。
+    为了解决这些问题，本文提出了一种基于视频内容的关键帧抽取算法，以及适用于层级标签预测的深度学习网络模型，该模型能够结合视频、文本特征和每一层的知识点信息，逐层地进行知识点预测。
+    具体而言，首先我们通过关键帧抽取算法去除视频中的冗余信息，得到一系列视频关键帧，同时根据关键帧之间的差异性对视频与字幕进行分块。
+    然后我们通过多模态特征提取层从关键帧和字幕文本中提取特征向量，再分段送入基于注意力机制的层级网络中提取出知识点层级结构与教育视频之间的关联，
+    以及教育视频内部多模态信息之间的关联，最后计算得到视频的局部表征和知识点的局部预测结果。
+    最后通过混合预测模块融合局部表证和局部预测结果，得到每一个视频块以及整个教育视频的知识点预测结果。
+\end{abstract}
+
+\begin{abstract*}
+    % This is a sample document of USTC thesis \LaTeX{} template for bachelor,
+    % master and doctor. The template is created by zepinglee and seisman, which
+    % orignate from the template created by ywg. The template meets the
+    % equirements of USTC thesis writing standards.
+
+    % This document will show the usage of basic commands provided by \LaTeX{} and
+    % some features provided by the template. For more information, please refer to
+    % the template document ustcthesis.pdf.
+\end{abstract*}
