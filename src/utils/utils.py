@@ -17,7 +17,7 @@ from gensim.utils import tokenize
 from collections import OrderedDict
 
 
-def getLogger(log_dir: str, name: str="log") -> logging.Logger:
+def getLogger(log_dir: str, model_name: str, name: str="log") -> logging.Logger:
     """
     @param: log_dir: directory to save log files
     @param: name: logger name
@@ -27,7 +27,7 @@ def getLogger(log_dir: str, name: str="log") -> logging.Logger:
         os.makedirs(log_dir)
 
     now = datetime.datetime.now()
-    filename = "HARNN_{}.log".format(now.strftime("%Y-%m-%d_%H:%M:%S"))
+    filename = "{}_{}.log".format(model_name, now.strftime("%Y-%m-%d_%H:%M:%S"))
     formatter = logging.Formatter(fmt="%(asctime)s - %(filename)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
     file_handler = logging.FileHandler(os.path.join(log_dir, filename), mode="w", encoding="utf-8")
     stream_handler = logging.StreamHandler()

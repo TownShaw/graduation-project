@@ -26,7 +26,8 @@ def set_seed(seed):
 
 
 def train(config: dict):
-    logger = utils.getLogger(config["log"]["log_dir"], name=config["log"]["name"])
+    model_name = ".".join(config["data"]["model_name"].split(".")[:-2])
+    logger = utils.getLogger(config["log"]["log_dir"], model_name=model_name, name=config["log"]["name"])
 
     word2vec_file = config["data"]["word2vec"]
     logger.info("Loading pretrained word embedding from '{0}'".format(word2vec_file))
@@ -51,7 +52,7 @@ def train(config: dict):
                                                              collate_fn=collate_fn)
 
     best_f1 = 0.0
-    model = HARNN(config, len(word2idx), pretrained_label_embedding=pretrained_embedding)
+    model = HARNN(config, len(word2idx), pretrained_word_embedding=pretrained_embedding)
     model_save_path = os.path.join(config["data"]["model_save_dir"], config["data"]["model_name"])
     if not os.path.isdir(config["data"]["model_save_dir"]):
         os.mkdir(config["data"]["model_save_dir"])
