@@ -2,8 +2,8 @@
 
 \section{教育视频关键帧抽取}
     视频中所包含的信息是非常丰富的，但对于教育视频而言，通常冗余、重复的信息占比也很大。
-    比如教师上课的一段视频，视频中任意相邻两帧之间的时间差往往在数十毫秒左右，在如此短的时间内，教师几乎无法传达出新的有效信息，从而使得这相邻的两帧所包含的信息几乎完全相同。
-    若不加处理地将全量视频信息输入到深度学习模型中进行知识点预测会对计算机造成不必要的负担，同时由于计算量的庞大导致模型迭代收敛的效率低下。
+    比如教师上课的一段视频，视频中任意相邻两帧之间的时间差往往在数十毫秒左右，在如此短的时间内，教师几乎无法传达出新的有效信息，这导致了这相邻的两帧所包含的信息几乎完全相同。
+    若不加处理地将全量视频信息输入到深度学习模型中进行知识点预测会对计算机造成不必要的负担，同时也会因为计算量庞大而导致模型迭代收敛效率的低下。
     因此为了减少冗余的信息，同时从教育视频中提取出真正重要且有价值的信息，需要对视频进行关键帧采样。
 
     教育类视频通常具有增量式\cite{Wang2020FineGrainedSM}的特点，即视频中后一帧的内容可以覆盖前一帧。
@@ -37,7 +37,7 @@
         \Input{Video, FPS, interval, frameNum}
         \Output{List of Keyframes}
         \BlankLine
-        % \emph{special treatment of the first line}\;
+        % \emph{Initialization}\;
         \KeyframeList \leftarrow $\emptyset$\;
         \LowIdx \leftarrow $0$\;
         \HighIdx \leftarrow $\Interval \cdot \FPS$\;
@@ -55,7 +55,7 @@
                     \HighIdx \leftarrow \Min{$\FrameNum - 1$, $\LowIdx + \Interval \cdot \FPS$}\;
                 }
                 \Else{
-                    \MiddleIdx \leftarrow $(\LowIdx + \HighIdx) / 2$\;
+                    \MiddleIdx \leftarrow $\left(\LowIdx + \HighIdx\right) / 2$\;
                     \Framek \leftarrow \SeekFrame{\Video, \MiddleIdx}\;
                     \If{\CanCover{\Framep, \Framek}}{
                         \LowIdx \leftarrow \MiddleIdx\;
@@ -74,7 +74,7 @@
 
     教育类视频经过算法 \ref{algo_keyframe} 处理就可以得到该视频的所有关键帧，每个关键帧都包含了前一段时间内教师所讲授的全部内容。
     整个视频也根据抽取的关键帧分为了多个块，每个视频块以首尾两帧作为关键帧，这段时间内的字幕作为该块视频的对应文本。
-    关键帧抽取的结果以及整个模型的架构如图 \ref{fig3.1} 所示。
+    {\color{red} 关键帧抽取的结果以及整个模型的架构如图 \ref{fig3.1} 所示。}
 
     \begin{figure}[htb]
         \centering
@@ -85,26 +85,26 @@
 
 
 \section{多模态特征提取}
-    通过关键帧抽取得到了一系列关键帧和相应的视频块与字幕文本，但这些多模态信息并不能直接被计算机理解。
+    我们通过关键帧抽取算法可以从教育类视频中提取出一系列关键帧与字幕文本段，但这些多模态信息并不能直接被计算机理解。
     要利用这些信息进行知识点预测，首先需要通过多模态特征提取将这些多模态信息转化为计算机能够理解并使用的形式。
 
-    对于视频信息，我们可以对每段视频的首尾两帧使用 ResNet\cite{He2016DeepRL} 分别抽取出图像的特征向量，然后将这两个特征向量进行平均，作为该段视频的视频特征。
+    对于视频信息，我们可以对每块视频的首尾两帧使用 ResNet\cite{He2016DeepRL} 分别抽取出图像的特征向量，然后将这两个特征向量进行平均，作为该段视频的视频特征。
 
     对于文本信息而言，文本可以视作为一系列词的组合，因此对文本进行表征本质上就是对词进行表征。
-    对于一段包含 $N$ 个词的文本序列 $x = \{w_1, w_2, \dots, w_N\}$，我们使用经过预训练的词向量 GloVe\cite{Pennington2014GloVeGV} 对序列中所有的词进行词嵌入，
-    通过将每个词映射为一个固定长度 $d_w$ 的向量，得到表征文本序列的特征向量矩阵 $\boldsymbol{X} = \{v_1, v_2, \dots, v_N\} \in \mathbb{R}^{N \times d_{w}}$。
+    对一段包含 $N$ 个词的文本序列 $x = \{w_1, w_2, \dots, w_N\}$，我们使用经过预训练的词向量 GloVe\cite{Pennington2014GloVeGV} 对序列中所有的词进行词嵌入，
+    通过将每个词映射为一个固定长度 $d_w$ 的向量，得到文本序列的特征向量矩阵 $\boldsymbol{X} = \{v_1, v_2, \dots, v_N\} \in \mathbb{R}^{N \times d_{w}}$。
 
     同时，知识点体系也可以视为一种模态的信息，类似于我们对文本进行表征的方法，我们也可以将所有的知识点映射为特征向量。
     但这里我们仅用随机向量来表征每个知识点，待模型训练时再对每个知识点的特征向量进行迭代更新和微调。
     至此我们得到了知识点体系的特征矩阵 $\boldsymbol{K} = (K_1, K_2, \dots, K_C) \in \mathbb{R}^{C \times d_c}$，其中 $C$ 为知识点总个数，$d_c$ 为知识点特征向量的长度。
-    假设知识点体系共有 $H$ 层，则知识点特征矩阵也可以表示为 $\boldsymbol{K} = [K^1; K^2; \dots; K^H]$。
+    假设知识点体系共有 $H$ 层，则知识点特征矩阵也可以表示为 $\boldsymbol{K} = [\boldsymbol{K^1}; \boldsymbol{K^2}; \dots; \boldsymbol{K^H}]$。
 
 
 \section{双向 LSTM}
     我们在多模态特征提取过程中已经将文本序列转化为了词向量特征矩阵，但是这种文本的表征信息密度还不够大。
     在自然语言中，一段文本所包含的信息不仅仅由各个词单独包含的信息堆砌而成，词与词、句与句之间的联系所包含的信息也非常重要，因此我们需要在词向量的基础上进一步抽取出隐含在词与词之间的关联信息。
-    我们使用 双向 LSTM\cite{Hochreiter1997LongSM}(双向长短期记忆模型)来对词向量进行进一步的特征提取。
-    双向 LSTM 相较于普通的 RNN 而言不仅能获取到文本序列中更长距离的词之间的关联信息，还能同时获取前向和后向的信息。
+    我们使用 双向长短期记忆模型(Long Short-Term Memory, LSTM)\cite{Hochreiter1997LongSM}来对词向量进行进一步的特征提取。
+    双向 LSTM 相较于普通的循环神经网络(Recurrent Neural Network, RNN)而言不仅能捕获到文本序列中相距更远的词之间的关联信息，还能同时获取来自前向和后向的词的信息。
     输入词向量序列 $\boldsymbol{X} = \{v_1, v_2, \dots, v_N\}$，双向 LSTM 计算隐向量的方式为：
     \begin{equation}
         \begin{aligned}
@@ -114,18 +114,18 @@
         \end{aligned}
     \end{equation}
     其中 $\overrightarrow{h_{n}}$ 为前向传播过程中第 $n$ 个词的隐向量，$\overleftarrow{h_{n}}$ 为后向传播过程中第 $n$ 个词的隐向量，$\overrightarrow{h_{n}}, \overleftarrow{h_{n}} \in \mathbb{R}^{u}$。
-    我们将这两个隐向量进行拼接得到隐向量 $h_n \in \mathbb{2u}$，即为文本序列中第 $n$ 个词连同其上下文信息的特征向量。
+    我们将这两个隐向量进行拼接得到隐向量 $h_n \in \mathbb{R}^{2u}$，即为文本序列中第 $n$ 个词连同其上下文信息的特征向量。
     因此词向量特征矩阵经过 双向 LSTM 后得到的输出为 $V = (h_1, h_2, \dots, h_N) \in \mathbb{R}^{N \times 2u}$。
     此外，我们在词的维度对隐向量矩阵取平均，将 $N$ 个词的所有信息融合到一个特征向量中，得到文本序列的一个统一特征表示向量 $\tilde{V} = avg(V) = avg(h_1, h_2, \dots, h_N)$
 
 
 \section{基于注意力的循环网络}
-    在提取出视频、文本、知识点体系等多模态信息的特征向量之后，我们将使用基于注意力机制的循环神经网络 HARL\cite{Huang2019HierarchicalMT} 对输入每块视频的多模态信息进行整合和知识点预测。
-    HARL 是一个基于循环与注意力的模型，能够对层级知识点体系自上而下地逐层预测知识点。
-    基于注意力的记忆单元 HAM 是 HARL 网络的基本单元，每一个 HAM 都是层级知识点体系中的某一层知识点的预测单元，多个 HAM 串联起来就构成了具有循环结构的 HARL。
+    在提取出视频、文本、知识点体系等多模态信息的特征向量之后，我们将使用\textbf{基于注意力机制的循环神经网络(Hierarchical Attention-based Recurrent Layer, HARL)}\cite{Huang2019HierarchicalMT} 对输入每块视频的多模态信息进行整合和知识点预测。
+    HARL 是一个基于循环与注意力的模型，能够在层级知识点体系上自上而下地逐层预测知识点。
+    \textbf{基于注意力的记忆单元(Hierarchical Attention Memory unit, HAM)} 是 HARL 网络的基本单元，每一个 HAM 都是层级知识点体系中的某一层知识点的预测单元，多个 HAM 串联起来就构成了具有循环结构的 HARL。
     HAM 原本是用于使用注意力机制捕获文本与知识点之间的关联，但只要我们对 HAM 内部实现稍作修改就可以用于捕获视频与文本、标签与文本等多模态信息之间的关联关系。
-    除此之外，在对第 $h$ 层知识点进行预测时，HAM 能够整合第 $h - 1$ 层已经预测的知识点的信息来指导本层知识点的预测，同时生成指导第 $h + 1$ 层进行知识点预测的语义信息。
-    考虑到层级知识点体系从上到下通常伴随着知识点的逐渐细化与具体，HARL 自上而下的预测方式也具有现实意义与合理性。
+    除此之外，在对第 $h$ 层的知识点进行预测时，HAM 能够整合第 $h - 1$ 层的知识点预测结果来对本层知识点的预测产生影响，同时生成指导第 $h + 1$ 层进行知识点预测的信息。
+    层级知识点体系从上到下通常伴随着知识点的逐渐细化与具体，HARL 自上而下、上层影响下层的预测方式也具有现实意义与合理性。
     HARL 网络的整体架构和 HAM 的内部实现如图 \ref{fig3.2} 所示。
 
     \begin{figure}[htb]
@@ -137,25 +137,26 @@
 
 \subsection{基于注意力的记忆单元}
     HAM 主要包含三个模块，VTKA 模块、KPM 模块以及 KDM 模块。
+    在图 \ref{fig3.2} 中，每个 HAM 模块中用红色方框标注的部分即为 VTKA 模块，使用橙色方框标注的部分为 KPM 模块，绿色方框标注的部分为 KDM 模块。
 
-    其中 VTKA 模块为 Video-Text-Knowledge Attention，即视频-文本-知识点注意力模块，该模块接收视频、文本、当前层知识点表征以及来自上一层 HAM 的知识点预测语义信息，
-    从而结合这四个方面的信息捕捉视频、文本与当前层知识点之间的关联信息。
-    KPM 模块为 Knowledge Prediction Module，即知识点预测模块，该模块主要用于接受来自 VTKA 模块捕捉到的关联信息，结合初始的视频、文本表征对当前层的知识点进行预测。
-    同时生成一个包含了视频、文本、当前层知识点信息的统一特征表示。
-    KDM 模块为 Knowledge Dependency Module，即知识点依赖模块。该模块接受来自 VTKA 的关联信息和 KPM 对当前层知识点的预测结果，根据这两个计算结果来获取不同层知识点之间的依赖关系。
-    该依赖关系将被送到下一层 HAM 中对下一层知识点的预测提供指导信息。
+    其中 VTKA 模块为\textbf{视频-文本-知识点注意力(Video-Text-Knowledge Attention)模块}。该模块接收视频、文本、当前层知识点表征以及来自上一层 HAM 的知识点预测的语义信息，
+    结合这四个方面的信息来捕捉视频与文本、文本与当前层知识点之间的关联信息。
+    KPM 模块为\textbf{知识点预测(Knowledge Prediction Module)模块}。该模块主要接受来自 VTKA 模块捕捉到的多模态特征关联信息，结合初始的视频、文本多模态信息来对当前层的知识点进行预测。
+    同时 KPM 模块在进行知识点预测的过程中会生成一个包含了视频、文本与当前层知识点信息的统一特征向量。
+    KDM 模块为\textbf{知识点依赖模块(Knowledge Dependency Module)模块}。该模块接受来自 VTKA 的关联信息和 KPM 对当前层知识点的预测结果，根据这两个计算结果来获取多模态信息与当前层知识点之间的依赖关系。
+    该依赖关系将被送到下一个 HAM 中，对下一层知识点的预测进行指导。
 
-    因此对第 $h$ 层的 HAM，输入视频特征向量 $\boldsymbol{U}$，文本特征向量矩阵 $\boldsymbol{V}$，来自上一层的知识点依赖信息 $\omega^{h - 1}$ 以及知识点特征向量 $K^h$，各模块输出的计算公式为：
+    对第 $h$ 层的 HAM，输入视频特征向量 $\boldsymbol{U}$，文本特征向量矩阵 $\boldsymbol{V}$，来自上一层的知识点依赖信息 $\boldsymbol{\omega^{h - 1}}$ 以及知识点特征向量 $\boldsymbol{K^h}$，各模块输出的计算公式为：
     \begin{equation}
         \begin{aligned}
             &\tilde{V} = avg(\boldsymbol{V}) \\
             &r_{att}^h, W_{att}^h, u_{att}^h = VTKA(\boldsymbol{\omega^{h - 1}}, U, \boldsymbol{V}, \boldsymbol{K^h}) \\
-            &P_L^h, A_L^h = KPM(\tilde{V} \oplus U \oplus r_{att}^h \oplus u_{att}^h) \\
+            &P_L^h, A_L^h = KPM(\tilde{V}, U, r_{att}^h, u_{att}^h) \\
             &\boldsymbol{\omega^h} = KDM(W_{att}, P_L^h)
         \end{aligned}
     \end{equation}
     其中，$r_{att}^{h}, W_{att}^h$ 分别为包含了文本-知识点关联信息的特征向量和注意力矩阵，$u_{att}^h$ 为包含了视频-文本关联信息的特征向量，
-    $P_L^h, A_L^h$ 分别为 HAM 对当前层知识点的预测结果和对当前层输入的统一表示，$\boldsymbol{\omega^h}$ 则代表了第 $h$ 层知识点依赖关系的融合信息，
+    $P_L^h$ 为 HAM 对当前层知识点的预测结果，$A_L^h$ 则为融合了视频、文本和当前层知识点信息的统一特征向量，$\boldsymbol{\omega^h}$ 则代表了第 $h$ 层知识点依赖关系的融合信息。
     特别地，我们将 $\boldsymbol{\omega^0}$ 初始化为一个全 $1$ 矩阵，表示在得知层级知识点体系的第一层的有关信息之前没有任何先验知识。
 
     下面我们对 HAM 的三个模块结构进行详细说明。
@@ -168,16 +169,16 @@
     \end{equation}
     这里 $\otimes$ 代表矩阵逐项相乘的操作，运算结果 $\boldsymbol{V}_h \in \mathbb{R}^{N \times 2u}$ 就是融合了文本信息和已知的知识点层级依赖信息的结果。
 
-    考虑到一个视频的不同片段、与之对应的文本的不同部分可能涉及到不同的知识点，我们使用注意力机制来捕获文本信息和知识点之间更细粒度的关系，计算方式如下：
+    考虑到教师在一段时间内的讲解内容可能涉及到多个不同的知识点，我们使用注意力机制来捕获字幕文本信息和知识点之间更细粒度的关系，计算方式如下：
     \begin{equation}
         \begin{aligned}
             &O_h = tanh(\boldsymbol{W}_s^h \cdot \boldsymbol{V}_h^T) \\
             &W_{att}^h = softmax(K^h \cdot O_h)
         \end{aligned}
     \end{equation}
-    其中 $\boldsymbol{W}_s^h$ 是一个随机初始化的、可训练的参数矩阵。计算 $O_h$ 的目的在于改变 $V_h$ 的维度，使其能够与 $K^h$ 进行矩阵运算，从而计算注意力矩阵。
-    $W_{att}^h \in \mathbb{R}^{\left|K^h\right| \times N}$ 即为文本信息与当前层知识点信息之间的注意力矩阵，包含了二者的关联信息。
-    记 $W_{att}^h = (W_1^h, W_2^h, \dots, W_{\left|K^h\right|}^h)$，经过 $softmax$ 操作后 $W_{att}^h$ 的每一个行向量 $W_i^h \in \mathbb{R}^N$ 之和都为 1。
+    其中 $\boldsymbol{W}_s^h$ 是一个随机初始化的、可训练的参数矩阵。计算 $O_h$ 的目的在于改变 $V_h$ 的维度，使其能够与 $K^h$ 进行矩阵运算。
+    经过上式的计算，$W_{att}^h \in \mathbb{R}^{\left|K^h\right| \times N}$ 即为文本信息与当前层知识点信息之间的注意力矩阵，包含了二者的关联信息。
+    记 $W_{att}^h = (W_1^h, W_2^h, \dots, W_{\left|K^h\right|}^h)$，在经过 $softmax$ 操作后 $W_{att}^h$ 的每一个行向量 $W_i^h \in \mathbb{R}^N$ 之和都为 1。
     $W_i^h$ 中的注意力分数都可以视为权重值，这代表着文本信息中的不同部分与知识点 $i$ 的关联相似程度。
     因此可以使用该注意力分数矩阵来对多模态信息进行加权平均：
     \begin{equation}
@@ -185,12 +186,12 @@
     \end{equation}
     从而得到融合了第 $h$ 层知识点标签信息的文本信息特征矩阵 $M_h \in \mathbb{R}^{{\left|K^h\right|} \times 2u}$，
     $M_h$ 中每一个行向量 $M_i$ 都是文本信息在受到第 $i$ 个知识点影响后的特征向量。
-    接着我们再对 $M_h$ 做平均池化，可以得到具有当前第 $h$ 层所有知识点信息的特征向量 $r_{att}^h \in \mathbb{R}^{2u}$：
+    接着我们再对 $M_h$ 作平均池化操作，可以得到融合了文本信息和第 $h$ 层所有知识点信息的特征向量 $r_{att}^h \in \mathbb{R}^{2u}$：
     \begin{equation}
         r_{att}^h = avg(M_h)
     \end{equation}
 
-    同样的，考虑到视频关键帧与对应文本段的不同部分关联程度可能不同，类似于上面的步骤，我们也通过注意力机制来捕获文本段与视频关键帧之间的关联关系：
+    同样的，考虑到视频关键帧的不同区域可能涉及到不同的内容，因此与对应文本段的不同部分关联程度也不尽相同，类似于上面的步骤，我们也通过注意力机制来捕获文本段与视频关键帧之间的关联关系：
     \begin{equation}
         \begin{aligned}
             &O_h' = tanh(\boldsymbol{W}_u^h \cdot \boldsymbol{V}_h^T) \\
