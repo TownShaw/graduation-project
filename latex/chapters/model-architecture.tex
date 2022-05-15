@@ -13,19 +13,75 @@
     最后我们使用深度学习模型分别对分割得到的视频块进行知识点预测，综合所有视频块的预测结果得到整个教育视频涉及到的知识点。
     这样不仅能更加充分地利用视频中的所有信息，使得最终预测结果更加可靠，也能让最终的预测结果具有更好的可解释性。
 
-    为此，我们设计了一种类似二分查找的视频关键帧采样算法，具体步骤为：
+    为此，我们设计了一种类似二分查找的视频关键帧采样算法，伪代码实现如算法 \ref{algo_keyframe} 所示。
+    \IncMargin{1em}
+    \begin{algorithm}
+        \SetKwData{Framep}{$frame_p$}
+        \SetKwData{Frameq}{$frame_q$}
+        \SetKwData{Framek}{$frame_k$}
+        \SetKwData{FPS}{FPS}
+        \SetKwData{Video}{Video}
+        \SetKwData{Interval}{interval}
+        \SetKwData{FrameNum}{frameNum}
+        \SetKwData{KeyframeList}{KeyframeList}
+        \SetKwData{LowIdx}{lowIdx}
+        \SetKwData{HighIdx}{highIdx}
+        \SetKwData{MiddleIdx}{middleIdx}
+        \SetKwFunction{Min}{min}
+        \SetKwFunction{Union}{union}
+        \SetKwFunction{CanCover}{canCover}
+        \SetKwFunction{SeekFrame}{seekFrame}
+        \SetKwInOut{Input}{input}
+        \SetKwInOut{Output}{output}
 
-    步1. 选取整个视频的首帧(记为 $frame_{p}$)以及距离首帧 n 秒的视频帧(记为 $frame_{q}$)为候选帧；
+        \Input{Video, FPS, interval, frameNum}
+        \Output{List of Keyframes}
+        \BlankLine
+        % \emph{special treatment of the first line}\;
+        \KeyframeList \leftarrow $\emptyset$\;
+        \LowIdx \leftarrow $0$\;
+        \HighIdx \leftarrow $\Interval \cdot \FPS$\;
+        \While{\LowIdx \neq $\FrameNum - 1$}{
+            \Framep \leftarrow \SeekFrame{\Video, \LowIdx}\;
+            \Frameq \leftarrow \SeekFrame{\Video, \HighIdx}\;
+            \If{\CanCover{\Framep, \Frameq}}{
+                \LowIdx \leftarrow \HighIdx\;
+                \HighIdx \leftarrow \Min{$\FrameNum - 1$, $\LowIdx + \Interval \cdot \FPS$}\;
+            }
+            \Else{
+                \If{\LowIdx == \HighIdx}{
+                    \KeyframeList \leftarrow \Union{\KeyframeList, \Framep}\;
+                    \LowIdx \leftarrow \HighIdx\;
+                    \HighIdx \leftarrow \Min{$\FrameNum - 1$, $\LowIdx + \Interval \cdot \FPS$}\;
+                }
+                \Else{
+                    \MiddleIdx \leftarrow $(\LowIdx + \HighIdx) / 2$\;
+                    \Framek \leftarrow \SeekFrame{\Video, \MiddleIdx}\;
+                    \If{\CanCover{\Framep, \Framek}}{
+                        \LowIdx \leftarrow \MiddleIdx\;
+                    }
+                    \Else{
+                        \HighIdx \leftarrow \MiddleIdx\;
+                    }
+                }
+            }
+        }
+        \KeyframeList \leftarrow \Union{\KeyframeList, \SeekFrame{\Video, $\FrameNum - 1$}}\;
+        \Return{\KeyframeList}\;
+        \caption{Keyframe Extraction Algorithm}\label{algo_keyframe}
+    \end{algorithm}
+    \DecMargin{1em}
 
-    步2. 判断 $frame_{q}$ 是否覆盖 $frame_{p}$。若 $frame_{q}$ 能够覆盖 $frame_{p}$ 则进入步3，否则进入步4；
-
-    步3. 若 $frame_{q}$ 已经为视频的末尾帧，则视频采样完成；否则令 $frame_{q}$ 为距离当前 $frame_{q}$ n 秒的视频帧，返回步2；
-
-    步4. 若 $frame_{p} == frame_{q}$ 则记录当前帧 $frame_{p}$，同时返回步3。否则令 $frame_{k}$ 为 $frame_{p}$ 和 $frame_{q}$ 的中间帧，判断 $frame_{k}$ 是否能覆盖 $frame_{p}$，
-    若 $frame_{k}$ 能覆盖 $frame_{p}$ 则令 $frame_{p} = frame_{k}$，否则令 $frame_{q} = frame_{k}$，返回步2；
-
-    经过以上算法就可以提取出视频块之间的分界帧，再加上整个视频的首尾两帧便完成了教育视频的关键帧抽取。
+    教育类视频经过算法 \ref{algo_keyframe} 处理就可以得到该视频的所有关键帧，每个关键帧都包含了前一段时间内教师所讲授的全部内容。
     整个视频也根据抽取的关键帧分为了多个块，每个视频块以首尾两帧作为关键帧，这段时间内的字幕作为该块视频的对应文本。
+    关键帧抽取的结果以及整个模型的架构如图 \ref{fig3.1} 所示。
+
+    \begin{figure}[htb]
+        \centering
+        \includegraphics[width=1\linewidth]{model-architect.pdf}
+        \caption{深度模型架构}
+        \label{fig3.1}
+    \end{figure}
 
 
 \section{多模态特征提取}
@@ -70,7 +126,14 @@
     HAM 原本是用于使用注意力机制捕获文本与知识点之间的关联，但只要我们对 HAM 内部实现稍作修改就可以用于捕获视频与文本、标签与文本等多模态信息之间的关联关系。
     除此之外，在对第 $h$ 层知识点进行预测时，HAM 能够整合第 $h - 1$ 层已经预测的知识点的信息来指导本层知识点的预测，同时生成指导第 $h + 1$ 层进行知识点预测的语义信息。
     考虑到层级知识点体系从上到下通常伴随着知识点的逐渐细化与具体，HARL 自上而下的预测方式也具有现实意义与合理性。
+    HARL 网络的整体架构和 HAM 的内部实现如图 \ref{fig3.2} 所示。
 
+    \begin{figure}[htb]
+        \centering
+        \includegraphics[width=1\linewidth]{HARL.pdf}
+        \caption{HARL}
+        \label{fig3.2}
+    \end{figure}
 
 \subsection{基于注意力的记忆单元}
     HAM 主要包含三个模块，VTKA 模块、KPM 模块以及 KDM 模块。
