@@ -1,4 +1,16 @@
 \chapter{深度模型架构}
+    我们的模型主要分为三个部分：1)对输入的教育类视频进行关键帧提取，同时将视频分割为一系列的视频子块；
+    2)将得到的视频子块连同对应的字幕文本段输入到深度神经网络中，完成多模态信息的特征提取、特征融合，最终得到每个视频子块的特征向量与知识点局部预测结果；
+    3)使用混合预测模块将所有视频块的特征向量和局部预测结果进行整合，得到每一个视频子块的最终预测结果，以及整个教育视频的最终预测结果。
+
+    整个模型的架构如图 \ref{fig3.1} 所示。
+    
+    \begin{figure}[htb]
+        \centering
+        \includegraphics[width=1\linewidth]{model-architect.pdf}
+        \caption{深度模型架构}
+        \label{fig3.1}
+    \end{figure}
 
 \section{教育视频关键帧抽取}
     视频中所包含的信息是非常丰富的，但对于教育视频而言，通常冗余、重复的信息占比也很大。
@@ -74,21 +86,13 @@
 
     教育类视频经过算法 \ref{algo_keyframe} 处理就可以得到该视频的所有关键帧，每个关键帧都包含了前一段时间内教师所讲授的全部内容。
     整个视频也根据抽取的关键帧分为了多个块，每个视频块以首尾两帧作为关键帧，这段时间内的字幕作为该块视频的对应文本。
-    {\color{red} 关键帧抽取的结果以及整个模型的架构如图 \ref{fig3.1} 所示。}
-
-    \begin{figure}[htb]
-        \centering
-        \includegraphics[width=1\linewidth]{model-architect.pdf}
-        \caption{深度模型架构}
-        \label{fig3.1}
-    \end{figure}
 
 
 \section{多模态特征提取}
     我们通过关键帧抽取算法可以从教育类视频中提取出一系列关键帧与字幕文本段，但这些多模态信息并不能直接被计算机理解。
     要利用这些信息进行知识点预测，首先需要通过多模态特征提取将这些多模态信息转化为计算机能够理解并使用的形式。
 
-    对于视频信息，我们可以对每块视频的首尾两帧使用 ResNet\cite{He2016DeepRL} 分别抽取出图像的特征向量，然后将这两个特征向量进行平均，作为该段视频的视频特征。
+    对于视频信息，我们使用 ResNet\cite{He2016DeepRL} 抽取出每块视频的首尾两帧图像的特征向量，然后将这两个特征向量进行平均，得到该段视频的视频特征 $\boldsymbol{U} \in \mathbb{R}^{d_v}$。
 
     对于文本信息而言，文本可以视作为一系列词的组合，因此对文本进行表征本质上就是对词进行表征。
     对一段包含 $N$ 个词的文本序列 $x = \{w_1, w_2, \dots, w_N\}$，我们使用经过预训练的词向量 GloVe\cite{Pennington2014GloVeGV} 对序列中所有的词进行词嵌入，
@@ -151,7 +155,7 @@
         \begin{aligned}
             &\tilde{V} = avg(\boldsymbol{V}) \\
             &r_{att}^h, W_{att}^h, u_{att}^h = VTKA(\boldsymbol{\omega^{h - 1}}, U, \boldsymbol{V}, \boldsymbol{K^h}) \\
-            &P_L^h, A_L^h = KPM(\tilde{V}, U, r_{att}^h, u_{att}^h) \\
+            &P_L^h, A_L^h = KPM(\tilde{V}, \boldsymbol{U}, r_{att}^h, u_{att}^h) \\
             &\boldsymbol{\omega^h} = KDM(W_{att}, P_L^h)
         \end{aligned}
     \end{equation}
@@ -178,20 +182,21 @@
     \end{equation}
     其中 $\boldsymbol{W}_s^h$ 是一个随机初始化的、可训练的参数矩阵。计算 $O_h$ 的目的在于改变 $V_h$ 的维度，使其能够与 $K^h$ 进行矩阵运算。
     经过上式的计算，$W_{att}^h \in \mathbb{R}^{\left|K^h\right| \times N}$ 即为文本信息与当前层知识点信息之间的注意力矩阵，包含了二者的关联信息。
-    记 $W_{att}^h = (W_1^h, W_2^h, \dots, W_{\left|K^h\right|}^h)$，在经过 $softmax$ 操作后 $W_{att}^h$ 的每一个行向量 $W_i^h \in \mathbb{R}^N$ 之和都为 1。
+    记 $W_{att}^h = \left(W_1^h, W_2^h, \dots, W_{\left|K^h\right|}^h\right)$，在经过 $softmax$ 操作后 $W_{att}^h$ 的每一个行向量 $W_i^h \in \mathbb{R}^N$ 之和都为 1。
     $W_i^h$ 中的注意力分数都可以视为权重值，这代表着文本信息中的不同部分与知识点 $i$ 的关联相似程度。
     因此可以使用该注意力分数矩阵来对多模态信息进行加权平均：
     \begin{equation}
         M_h = W_{att} \cdot \boldsymbol{V}_h
     \end{equation}
-    从而得到融合了第 $h$ 层知识点标签信息的文本信息特征矩阵 $M_h \in \mathbb{R}^{{\left|K^h\right|} \times 2u}$，
-    $M_h$ 中每一个行向量 $M_i$ 都是文本信息在受到第 $i$ 个知识点影响后的特征向量。
-    接着我们再对 $M_h$ 作平均池化操作，可以得到融合了文本信息和第 $h$ 层所有知识点信息的特征向量 $r_{att}^h \in \mathbb{R}^{2u}$：
+    从而得到融合了第 $h$ 层知识点标签信息的文本特征矩阵 $M_h \in \mathbb{R}^{{\left|K^h\right|} \times 2u}$。
+    记 $M_h = \left(M_{h_1}, M_{h_2}, \cdots, M_{h_{\left|K^h\right|}}\right)$, $M_h$ 中每一个行向量 $M_{h_i}$ 都是文本信息在受到第 $i$ 个知识点影响后的特征向量。
+    我们再对 $M_h$ 作平均池化操作，可以得到融合了文本信息和第 $h$ 层所有知识点信息的特征向量 $r_{att}^h \in \mathbb{R}^{2u}$：
     \begin{equation}
         r_{att}^h = avg(M_h)
     \end{equation}
 
-    同样的，考虑到视频关键帧的不同区域可能涉及到不同的内容，因此与对应文本段的不同部分关联程度也不尽相同，类似于上面的步骤，我们也通过注意力机制来捕获文本段与视频关键帧之间的关联关系：
+    类似地，考虑到视频关键帧的不同区域可能涉及到不同的内容，从而视频关键帧与字幕文本段的不同部分关联程度也不尽相同。
+    类似于上面的步骤，我们也通过注意力机制来捕获文本段与视频关键帧之间的关联关系：
     \begin{equation}
         \begin{aligned}
             &O_h' = tanh(\boldsymbol{W}_u^h \cdot \boldsymbol{V}_h^T) \\
@@ -199,31 +204,32 @@
             &u_{att}^h = w^h \cdot \boldsymbol{V}_h
         \end{aligned}
     \end{equation}
-    其中 $\boldsymbol{W}_s^h$ 也是一个随机初始化的、可训练的参数矩阵。最终得到的特征向量 $u_{att}^h$ 为 $\boldsymbol{V}_h^T$ 的词向量加权平均而来，
+    其中 $\boldsymbol{W}_s^h$ 也是一个随机初始化的、可训练的参数矩阵。最终得到的特征向量 $u_{att}^h$ 为 $\boldsymbol{V}_h$ 的词向量加权平均而来，
     与视频特征向量 $\boldsymbol{U}$ 关联相似程度越高的词向量，其信息在 $u_{att}^h$ 中的保留程度也就越高。
 
     \subsubsection{KPM}
-    在 VTKA 提取出多模态信息与知识点信息的关联关系之后，KPM 模块将结合特征向量 $r_{att}^h$ 和原始的视频、文本特征 $\boldsymbol{U}, \boldsymbol{\tilde{V}}$ 生成包含第 $h$ 层所有信息的统一特征向量 $A_L^h$，
-    同时使用该特征向量对当前层的知识点进行预测，得到当前第 $h$ 层的所有知识点预测分数 $P_L^h$。具体计算公式如下：
+    在 VTKA 提取出多模态信息与知识点信息的关联关系之后，KPM 模块将结合特征向量 $r_{att}^h, u_{att}^h$ 和原始的视频、文本特征 $\boldsymbol{U}, \boldsymbol{\tilde{V}}$ 生成包含第 $h$ 层所有信息的统一特征向量 $A_L^h$，
+    然后使用该特征向量对当前层的知识点进行预测，得到当前第 $h$ 层的所有知识点预测分数 $P_L^h$。具体计算公式如下：
     \begin{equation}
         \begin{aligned}
-        &A_L^h = \varphi\left(W_T^h \cdot \left[U \oplus \tilde{V} \oplus r_{att}^h\right] + b_T^h\right) \\
+        &A_L^h = \varphi\left(W_T^h \cdot \left[\tilde{V} \oplus \boldsymbol{U} \oplus r_{att}^h \oplus u_{att}^h\right] + b_T^h\right) \\
         &P_L^h = \sigma\left(W_L^h \cdot A_L^h + b_L^h\right)
         \end{aligned}
     \end{equation}
     其中，$\varphi$ 为非线性激活函数 $ReLU$，$\sigma$ 为 $sigmoid$ 激活函数，用于将预测分数归一化。
     $W_T^h \in \mathbb{R}^{v \times (4u + d_v)}, W_L^h \in \mathbb{R}^{{\left|K^h\right|} \times v}$ 为随机初始化的、可训练的参数矩阵，
     $b_T^h \in \mathbb{R}^{v}, b_L^h \in \mathbb{R}^{\left|K^h\right|}$ 为随机初始化的、可训练的偏置向量。
+    $v$ 为可设置的超参，用于确定特征向量 $A_L^h$ 的维度。
 
     \subsubsection{KDM}
     KDM 模块主要用于捕捉当前层知识点体系的特征，通过将结果输出到下一层 HAM 中参与运算，从而达到对层级知识点体系不同层之间的关联进行建模的目的。
     对于第 $h$ 层中的知识点，考虑到不同的知识点对预测结果有着不同的信息贡献，我们将使用第 $h$ 层的预测结果 $P_L^h$ 来对 VTKA 模块输出的注意力矩阵 $W_{att}^h$ 进行进一步的调整。
     以 $P_L^h$ 预测分数为权重，通过逐项相乘的方式来对 $W_{att}^h$ 中的信息作出取舍：
     \begin{equation}
-        E^h = broadcast(P_L^h) \otimes W_{att}^h
+        E^h = broadcast\left(P_L^h\right) \otimes W_{att}^h
     \end{equation}
     其中，$broadcast$ 操作意在将向量 $P_L^h$ 转变为与 $W_{att}^h$ 具有相同维度的矩阵，以便后续的矩阵操作，
-    即 $broadcast(P_L^h) = \left((P_L^h)^T, (P_L^h)^T, \dots, (P_L^h)^T\right) \in \mathbb{R}^{\left|K^h\right| \times N}$。
+    即 $broadcast\left(P_L^h\right) = \left(\left(P_L^h\right)^T, \left(P_L^h\right)^T, \dots, \left(P_L^h\right)^T\right) \in \mathbb{R}^{\left|K^h\right| \times N}$。
     注意到 $P_L^h$ 中的每一个预测分数值都在 $0 \sim 1$ 之间，因此逐项相乘操作的意义在于根据预测值来决定每个知识点保留的信息量。
     对于预测值较大的知识点，说明该知识点与输入的多模态信息关联性更强，逐项相乘也将会保留更多的有关该知识点的信息，反之亦然。
     因此 $E^h = (e_1^h, e_2^h, \dots, e_{\left|K^h\right|}^h) \in \mathbb{R}^{\left|K^h\right| \times N}$ 即为注意力矩阵 $W_{att}^h$ 经过信息取舍之后的结果。
@@ -233,29 +239,31 @@
         \tilde{E^h} = avg(E^h)
     \end{equation}
 
-    最后，我们再对 $\tilde{E^h}$ 做 $broadcast$ 操作，得到向下一层 HAM 传递的知识点依赖关系矩阵 $\boldsymbol{\omega}^h$：
+    最后，我们再对 $\tilde{E^h}$ 作 $broadcast$ 操作，得到向下一层 HAM 传递的知识点依赖信息矩阵 $\boldsymbol{\omega}^h$：
     \begin{equation}
-        \boldsymbol{\omega}^h = broadcast(\tilde{E}^h)
+        \boldsymbol{\omega}^h = broadcast\left(\tilde{E}^h\right)
     \end{equation}
     其中 $\boldsymbol{\omega}^h = (\omega_1^h, \omega_2^h, \dots, \omega_N^h) \in \mathbb{R}^{N \times 2u}$ 包含了多模态输入与第 $h$ 层所有知识点的关联信息，
     以及第 $h$ 层知识点本身的信息。将该矩阵传入到下一层 HAM 中参与计算也是对真实情况中上层知识点影响下层知识点这一特点的建模。
 
 
 \section{混合预测模块}
-    将多模态信息输入 HARL 模型之后，我们可以得到每一层知识点的预测结果 $P_L^h$，以及包含了每一层的知识点信息与多模态输入信息的统一表征向量 $A_L^h$。
-    从 HARL 中得到的逐层的知识点预测结果是对层级知识点体系局部预测的集合，而在层级多标签预测任务中，对整个层级结构进行全局的预测也非常重要。
-    因此我们将对所有层的统一特征向量进行信息综合，然后进行对所有知识点的全局预测。
+    将多模态信息输入 HARL 网络后，我们可以得到每一层知识点的局部预测结果 $P_L^h$，以及融合了多模态输入信息与每一层知识点信息的统一特征向量 $A_L^h$。
+    % {\color{red} 从 HARL 中得到的逐层的知识点预测结果是对层级知识点体系局部预测的集合，而在层级多标签预测任务中，对整个层级结构进行全局的预测也非常重要。}
+    至此，我们将每一层的局部预测结果 $P_L^h$ 进行拼接便得到了视频块的局部预测结果。
+    在层级多标签预测任务中，对整个层级知识点结构进行全局的预测也十分重要，
+    因此我们将对所有层的统一特征向量进行信息综合，进行对所有知识点的全局预测，最后将局部预测结果与全局预测结果进行加权平均，得到最终的知识点预测结果。
 
-    记 $A_L = (A_L^1, A_L^2, \dots, A_L^H) \in \mathbb{R}^{H \times v}$ 为所有局部统一表征向量构成的特征矩阵，
-    我们对该矩阵做平均池化操作，将 $H$ 层的特征向量进行综合，得到特征向量 $\tilde{A_L}$：
+    记 $A_L = \left(A_L^1, A_L^2, \dots, A_L^H\right) \in \mathbb{R}^{H \times v}$ 为所有局部统一表征向量构成的特征矩阵，
+    我们对该矩阵作平均池化操作，将全部 $H$ 层的特征向量进行综合，得到特征向量 $\tilde{A}_L$：
     \begin{equation}
         \tilde{A}_L = avg(A_L)
     \end{equation}
-    然后再通过 MLP 得到全局的特征向量 $A_G$ 和全局的知识点预测结果 $P_G$：
+    然后再通过多个全连接层得到全局的特征向量 $A_G$ 和全局的知识点预测结果 $P_G$：
     \begin{equation}
         \begin{aligned}
-            A_G = \varphi\left(W_G \cdot \tilde{A}_L + b_G\right)
-            P_G = \sigma\left(W_M \cdot A_G + b_M\right)
+            &A_G = \varphi\left(W_G \cdot \tilde{A}_L + b_G\right) \\
+            &P_G = \sigma\left(W_M \cdot A_G + b_M\right)
         \end{aligned}
     \end{equation}
     其中 $W_G \in \mathbb{R}^{v \times v}, W_M \in \mathbb{R}^{C \times v}$ 为随机初始化的、可训练的参数矩阵，
@@ -264,30 +272,30 @@
     $P_G$ 中每个预测分数的值都在 $0 \sim 1$ 之间，表示预测为对应知识点的概率值。
 
     我们记 $P_L = \left(P_L^1 \oplus P_L^2 \oplus \cdots \oplus P_L^H\right) \in \mathbb{R}^{C}$，
-    将所有知识点层级的局部预测结果包含到一个向量 $P_L$ 中，其中 $\oplus$ 为向量的拼接操作。
-    为了将局部预测与全局预测进行综合，我们使用加权平均的方式得到最终的知识点预测分数 $P_F \in \mathbb{R}^{C}$：
+    将所有知识点层级的局部预测结果囊括到一个向量 $P_L$ 中，其中 $\oplus$ 为向量的拼接操作。
+    然后我们将局部预测结果与全局预测结果进行加权平均，得到最终的知识点预测分数 $P_F \in \mathbb{R}^{C}$：
     \begin{equation}
         P_F = (1 - \alpha) \cdot P_L + \alpha \cdot P_G
     \end{equation}
     其中 $\alpha \in [0, 1]$ 为可改变的权重超参，用于确定在最终知识点预测分数中全局预测分数的占比，
-    $\alpha = 1$ 表示只考虑全局的预测结果而忽略逐层的、局部的预测结果。
+    $\alpha = 1$ 表示只考虑全局预测结果而忽略局部预测结果。
 
-    至此，我们完成了对一个视频块的知识点预测，要预测整个教育视频所涉及的知识点，还需要将所有视频块的特征向量和预测结果进行综合。
-    若该视频在关键帧抽取阶段被分割为 $S$ 段，则我们记 $A_{L_i} = \left(A_{L_i}^1, A_{L_i}^2, \dots, A_{L_i}^H\right)$ 为第 $i$ 个视频块的所有局部统一表征向量构成的特征矩阵，
-    则整个视频的特征向量矩阵为 $A_{LV} = \left(A_{L_1}, A_{L_2}, \dots, A_{L_S}\right) \in \mathbb{R}^{S \times H \times v}$。
+    至此，我们完成了对一个视频块的知识点预测，要得到整个教育视频所涉及的知识点，还需要将所有视频块的特征向量和预测结果进行综合。
+    若该视频在关键帧抽取阶段被分割为 $S$ 段，我们记 $\tilde{A}_{L_i} = avg\left(A_{L_i}^1, A_{L_i}^2, \dots, A_{L_i}^H\right) \in \mathbb{R}^{v}$ 为第 $i$ 个视频块的所有统一特征向量的平均池化结果，
+    则整个视频的特征向量矩阵为 $A_{LV} = \left(\tilde{A}_{L_1}, \tilde{A}_{L_2}, \dots, \tilde{A}_{L_S}\right) \in \mathbb{R}^{S \times v}$。
     类似于对某个单独的视频块所做的全局预测分数计算，我们也可以用相同的方式通过 $A_{LV}$ 计算出整个视频的全局预测分数 $P_{GV} \in \mathbb{R}^{C}$：
     \begin{equation}
         \begin{aligned}
-            &\tilde{A}_{LV} = avg\left(A_{L_1}, A_{L_2}, \dots, A_{L_S}\right) \\
+            &\tilde{A}_{LV} = avg\left(\tilde{A}_{L_1}, \tilde{A}_{L_2}, \dots, \tilde{A}_{L_S}\right) \\
             &A_{GV} = \varphi\left(W_{GV} \cdot \tilde{A}_{LV} + b_{GV}\right) \\
-            &P_{GV} = \sigma\left(W_{MV} \cdot \tilde{A}_{GV} + b_{MV}\right)
+            &P_{GV} = \sigma\left(W_{MV} \cdot A_{GV} + b_{MV}\right)
         \end{aligned}
     \end{equation}
     其中 $W_{GV} \in \mathbb{R}^{v \times v}, W_{MV} \in \mathbb{R}^{C \times v}$ 为随机初始化的、可训练的参数矩阵，
     $b_{GV} \in \mathbb{R}^{v}, b_{MV} \in \mathbb{R}^{C}$ 为随机初始化的、可训练的偏置向量。
 
     同样类似于对某个单独的视频块所作的最终预测分数计算，我们也期望使用整个视频的局部和全局预测分数来进行加权平均，得到最终预测分数。
-    记 $P_{L_i} = \left(P_{L_i}^1 \oplus P_{L_i}^2 \oplus \cdots \oplus P_{L_i}^H\right)$ 为第 $i$ 个视频块的局部预测结果，则将所有视频块分别经过 HARL 模型预测之后，
+    记 $P_{L_i} = \left(P_{L_i}^1 \oplus P_{L_i}^2 \oplus \cdots \oplus P_{L_i}^H\right)$ 为第 $i$ 个视频块的局部预测结果，则将所有视频块分别经过 HARL 网络预测之后，
     我们可以得到整个视频的局部预测分数矩阵 $P_{LV} = \left(P_{L_1}, P_{L_2}, \dots, P_{L_S}\right)$。
     类似地，我们通过对 $P_{LV}$ 做最大池化操作，将所有视频块的局部预测分数进行综合，可以得到表示整个视频局部预测分数的向量 $\tilde{P}_{LV} \in \mathbb{R}^{C}$，即：
     \begin{equation}
@@ -322,7 +330,6 @@
     %     \mathcal{L} = \mathcal{L}_L + \mathcal{L}_G + \mathcal{L}_C + \lambda\lVert\Theta\rVert
     % \end{equation}
     % 其中 $\Theta$ 代表模型中所有的可训练参数，$\lambda$ 为可调整的正则化系数，这一部分主要用于限制模型的复杂度，防止模型训练时可能出现的过拟合。
-
     \begin{equation}
         \mathcal{L} = \mathcal{L}_L + \mathcal{L}_G + \mathcal{L}_C
     \end{equation}
