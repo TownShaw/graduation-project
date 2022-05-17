@@ -3047,7 +3047,7 @@
   \else
     \ustc@chapter{\ustc@acknowledgements@name}%
     \ifustc@tocloaded
-      本科生需要手动将致谢置于目录前。\par
+      \par
     \fi
   \fi
 }{}
