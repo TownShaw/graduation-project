@@ -73,10 +73,36 @@
     MKPN-Text 是 MKPN 的一种变体，在该变体中我们仅用字幕文本作为模型的输入，而忽略来自视频的信息。
 
     \subsubsection{MKPN-G}
-    MKPN-G 是 MKPN 的一种变体，在改变体中我们忽略局部预测结果，而仅使用全局预测的方式来进行知识点预测。
+    MKPN-G 是 MKPN 的一种变体，在该变体中我们忽略局部预测结果，而仅使用全局预测的方式来进行知识点预测。
 
     \subsubsection{MKPN-L}
-    MKPN-L 是 MKPN 的一种变体，在改变体中我们忽略全局预测结果，而仅使用局部预测的方式来进行知识点预测。
+    MKPN-L 是 MKPN 的一种变体，在该变体中我们忽略全局预测结果，而仅使用局部预测的方式来进行知识点预测。
+
+    以上各 Baseline 与我们的 MKPN 模型在多模态信息的使用和层级多标签预测上的特点如表 \ref{table4.2} 所示。
+
+    \renewcommand{\arraystretch}{1.2}
+    \begin{table}[ht]
+        \centering
+        \begin{tabular}{c|cccc}
+            % \specialrule{.1em}{.05em}{.05em}
+            \toprule
+            \multirow{2}{*}{\makebox[0.3\textwidth][c]{\textbf{Baseline}}} & \multirow{2}{*}{\makebox[0.2\textwidth][c]{\textbf{Multimodal}}} & \multicolumn{3}{c}{\makebox[0.3\textwidth][c]{\textbf{Method}}} \\
+            \cline{3-5}
+            & & Local & Global & Hybrid \\
+            \hline
+            HMCN-R & - & - & - & \checkmark \\
+            HMCN-F & - & - & - & \checkmark \\
+            ResNet + TextCNN & \checkmark & - & - & - \\
+            MKPN-Text & - & - & - & \checkmark \\
+            MKPN-L & \checkmark & \checkmark & - & - \\
+            MKPN-G & \checkmark & - & \checkmark & - \\
+            MKPN & \checkmark & - & - & \checkmark \\
+            % \specialrule{.1em}{.05em}{.05em}
+            \bottomrule
+        \end{tabular}
+        \caption{各模型特点}
+        \label{table4.2}
+    \end{table}
 
 
 \section{评价指标}
@@ -104,7 +130,7 @@
 
 \section{实验结果}
     \subsection{模型效果比较}
-    所有 baseline 与 MKPN 模型在 Khan 数据集上的运行结果在表 \ref{table4.2} 中列出。
+    所有 Baseline 与 MKPN 模型在 Khan 数据集上的知识点预测结果在表 \ref{table4.3} 中列出。
     可以看到我们的 MKPN 模型在 Khan 数据集上取得了综合最好的知识点预测效果，这说明了 MKPN 模型在对于教育类视频进行知识点预测时具有良好的多模态信息捕捉能力，以及利用知识点层级结构进行层级分类的能力。
     同时我们可以注意到，能够利用多模态信息的模型在综合预测能力上都要优于使用单模态进行预测的模型。
     这一点尤其体现在各模型对于知识点的召回率上，未结合使用多模态信息的模型在进行知识点预测时的召回率要明显更低，这说明仅使用文本信息的模型对于视频中的特征信息提炼效果不佳，
@@ -129,12 +155,12 @@
             MKPN & 0.8916 & 0.5532 & 0.6828 \\
             \bottomrule
         \end{tabular}
-        \caption{知识点预测结果性能比较(基于内容)}
-        \label{table4.2}
+        \caption{各模型知识点预测性能(基于内容抽取关键帧)}
+        \label{table4.3}
     \end{table}
 
     \subsection{MKPN 变体模型比较}
-    在表 \ref{table4.2} 中我们可以看出 MPKN 模型相较于其他 MPKN 变体而言综合预测效果更好。
+    在表 \ref{table4.3} 中我们可以看出 MPKN 模型相较于其他 MPKN 变体而言综合预测效果更好。
     仅使用了文本信息的 MKPN-Text 在所有 MKPN 变体中的综合预测效果最差，知识点召回率远低于其他变体，这进一步说明多模态学习对于教育类视频的重要性。
     与此同时，可以看到相较于使用了混合预测模式的 MKPN 与 MKPN-Text，仅通过局部预测或全局预测方式的 MKPN-L 和 MKPN-G 在预测准确率上很低，而预测召回率较高，
     这说明 MKPN-L 和 MKPN-G 更倾向于预测更多的知识点，但不能较好地保证所预测知识点的正确率。
@@ -152,8 +178,8 @@
     为了说明我们对教育类视频进行关键帧抽取和视频分块方式的合理性，我们使用一个更为简单的关键帧抽取算法对 Khan 数据集进行处理。
     考虑到 Khan 数据集视频平均长度为 432 秒，我们通过时长对视频进行分块，将所有视频都切割为一系列最长时长不超过 200 秒的视频块，每个视频块的首尾两帧作为该视频块的关键帧。
     我们提出的根据内容进行关键帧抽取的算法和根据时长进行关键帧抽取的算法在 Khan 数据集上分别进行实验，得到的视频块分布信息如图 \ref{fig4.2} 所示。
-    同时各模型在经该关键帧抽取和视频分块策略处理后的 Khan 数据集中进行知识点预测的效果如表 \ref{table4.3} 中所示。
-    通过与表 \ref{table4.2} 中的预测结果比较，可以看到各模型的预测召回率有普遍的降低。
+    各模型在经基于时长的关键帧抽取算法处理后的 Khan 数据集中进行知识点预测的效果列在表 \ref{table4.4} 中，同时与表 \ref{table4.3} 的对比结果展示在图 \ref{fig4.3} 中。
+    从图 \ref{fig4.3} 中我们可以看到各模型的预测召回率有普遍的降低。
     这说明不考虑视频内容而简单地根据时长进行切割会导致一定程度的视频信息割裂，从而引起模型对割裂部分信息提取效果不佳，最终可能使得模型对割裂部分的知识点预测产生遗漏。
     相较而言，我们基于视频内容对教育类视频进行关键帧抽取和视频分块能够更好地保证每一个视频块的内容完整性，因此证明了我们基于视频内容的关键帧抽取算法的合理性。
 
@@ -173,6 +199,13 @@
             MKPN & 0.8599 & 0.5352 & 0.6598 \\
             \bottomrule
         \end{tabular}
-        \caption{知识点预测结果性能比较(基于时长)}
-        \label{table4.3}
+        \caption{各模型知识点预测性能(基于时长抽取关键帧)}
+        \label{table4.4}
     \end{table}
+
+    \begin{figure}[htb]
+        \centering
+        \includegraphics[width=1\linewidth]{performance_comparation.pdf}
+        \caption{基于不同关键帧抽取算法的各模型性能比较}
+        \label{fig4.3}
+    \end{figure}
