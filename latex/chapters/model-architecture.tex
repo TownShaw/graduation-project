@@ -5,7 +5,7 @@
 
     整个模型的架构如图 \ref{fig3.1} 所示。
     
-    \begin{figure}[htb]
+    \begin{figure}[t]
         \centering
         \includegraphics[width=1\linewidth]{model-architect.pdf}
         \caption{深度模型架构}
@@ -132,7 +132,7 @@
     层级知识点体系从上到下通常伴随着知识点的逐渐细化与具体，HARL 自上而下、上层影响下层的预测方式也具有现实意义与合理性。
     HARL 网络的整体架构和 HAM 的内部实现如图 \ref{fig3.2} 所示。
 
-    \begin{figure}[htb]
+    \begin{figure}[t]
         \centering
         \includegraphics[width=1\linewidth]{HARL.pdf}
         \caption{HARL}
@@ -141,7 +141,7 @@
 
 \subsection{基于注意力的记忆单元}
     HAM 主要包含三个模块，VTKA 模块、KPM 模块以及 KDM 模块。
-    在图 \ref{fig3.2} 中，每个 HAM 模块中用红色方框标注的部分即为 VTKA 模块，使用橙色方框标注的部分为 KPM 模块，绿色方框标注的部分为 KDM 模块。
+    在图 \ref{fig3.2} 中，每个 HAM 中用红色方框标注的部分即为 VTKA 模块，使用橙色方框标注的部分为 KPM 模块，绿色方框标注的部分为 KDM 模块。
 
     其中 VTKA 模块为\textbf{视频-文本-知识点注意力(Video-Text-Knowledge Attention)模块}。该模块接收视频、文本、当前层知识点表征以及来自上一层 HAM 的知识点预测的语义信息，
     结合这四个方面的信息来捕捉视频与文本、文本与当前层知识点之间的关联信息。
