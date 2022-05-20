@@ -22,7 +22,7 @@
     具体而言，首先我们通过关键帧抽取算法去除视频中的冗余信息，得到一系列视频关键帧，同时根据关键帧之间的差异性对视频与字幕进行分块。
     然后，我们通过多模态特征提取层从关键帧和字幕文本中提取特征向量，再分块送入基于注意力机制的层级网络中，
     提取出 1) 知识点层级结构与教育视频之间的关联以及 2) 教育视频内部多模态信息之间的关联，最后得到视频块的局部表征和知识点的局部预测结果。
-    最后通过混合预测模块融合局部表证和局部预测结果，得到每一个视频块以及整个教育视频的知识点预测结果。
+    最后通过混合预测模块融合局部表征和局部预测结果，得到每一个视频块以及整个教育视频的知识点预测结果。
 \end{abstract}
 
 \begin{abstract*}
@@ -38,14 +38,14 @@
     % {\color{red} how to effectively combine various modal information in the video,
     % and how to ensure the classification performance while meeting the requirements of hierarchical classification as much as possible are all challenges we have to face.}
     it is challenging to effectively combine multimodal information in the video, and get good classification performance while meeting the requirements of hierarchical consistency.
-    In order to solve these problems, in this paper, we proposes a Content-Based keyframe extraction algorithm and a deep learning model suitable for hierarchical knowledge prediction,
+    In order to solve these problems, in this paper, we propose a Content-Based keyframe extraction algorithm and a deep learning model suitable for hierarchical knowledge prediction,
     which can combine video and text features to predict knowledge layer by layer.
     Specifically, we first remove redundant information in the video through the keyframe extraction algorithm,
     obtain a series of video keyframes, and divide the video and subtitles into sections according to the differences between the keyframes.
-    Then, we extract features from keyframes and subtitles through a multimodal representation layer, and then putting them into an attention-based hierarchical network to extract
+    Then, we extract features from keyframes and subtitles through a multimodal representation layer, and then put them into an attention-based hierarchical network to extract
     1) the association between the knowledge hierarchy and educational videos and
     2) correlation between multimodal information within educational videos,
     and finally obtaining local representations and local predictions of video sections.
-    Finally, the local representations and local predictions are fused by the Hybrid Predicting Layer to compute the final knowledge predictions of each video section as well as the entire educational video.
+    Finally, the Hybrid Predicting Layer fuses the local representations and local predictions to compute the final knowledge predictions of each video section and the entire educational video.
     % {\color{red} and the knowledge predictions of each video section and the entire educational video are obtained.}
 \end{abstract*}
