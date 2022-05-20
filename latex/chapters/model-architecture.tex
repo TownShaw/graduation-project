@@ -100,15 +100,15 @@
 
     同时，知识点体系也可以视为一种模态的信息，类似于我们对文本进行表征的方法，我们也可以将所有的知识点映射为特征向量。
     但这里我们仅用随机向量来表征每个知识点，待模型训练时再对每个知识点的特征向量进行迭代更新和微调。
-    至此我们得到了知识点体系的特征矩阵 $\boldsymbol{K} = (K_1, K_2, \dots, K_C) \in \mathbb{R}^{C \times d_c}$，其中 $C$ 为知识点总个数，$d_c$ 为知识点特征向量的长度。
-    假设知识点体系共有 $H$ 层，则知识点特征矩阵也可以表示为 $\boldsymbol{K} = [\boldsymbol{K^1}; \boldsymbol{K^2}; \dots; \boldsymbol{K^H}]$。
+    至此我们得到了知识点体系的特征矩阵 $\boldsymbol{K} = \left(K_1, K_2, \dots, K_C\right) \in \mathbb{R}^{C \times d_c}$，其中 $C$ 为知识点总个数，$d_c$ 为知识点特征向量的长度。
+    假设知识点体系共有 $H$ 层，则知识点特征矩阵也可以表示为 $\boldsymbol{K} = \left[\boldsymbol{K^1}; \boldsymbol{K^2}; \dots; \boldsymbol{K^H}\right]$。
 
 
 \section{双向 LSTM}
     我们在多模态特征提取过程中已经将文本序列转化为了词向量特征矩阵，但是这种文本的表征信息密度还不够大。
     在自然语言中，一段文本所包含的信息不仅仅由各个词单独包含的信息堆砌而成，词与词、句与句之间的联系所包含的信息也非常重要，因此我们需要在词向量的基础上进一步抽取出隐含在词与词之间的关联信息。
-    我们使用 双向长短期记忆模型(Long Short-Term Memory, LSTM)\cite{Hochreiter1997LongSM}来对词向量进行进一步的特征提取。
-    双向 LSTM 相较于普通的循环神经网络(Recurrent Neural Network, RNN)而言不仅能捕获到文本序列中相距更远的词之间的关联信息，还能同时获取来自前向和后向的词的信息。
+    我们使用 双向长短期记忆模型（Long Short-Term Memory, LSTM）\cite{Hochreiter1997LongSM}来对词向量进行进一步的特征提取。
+    双向 LSTM 相较于普通的循环神经网络（Recurrent Neural Network, RNN）而言不仅能捕获到文本序列中相距更远的词之间的关联信息，还能同时获取来自前向和后向的词的信息。
     输入词向量序列 $\boldsymbol{X} = \{v_1, v_2, \dots, v_N\}$，双向 LSTM 计算隐向量的方式为：
     \begin{equation}
         \begin{aligned}
@@ -119,14 +119,14 @@
     \end{equation}
     其中 $\overrightarrow{h_{n}}$ 为前向传播过程中第 $n$ 个词的隐向量，$\overleftarrow{h_{n}}$ 为后向传播过程中第 $n$ 个词的隐向量，$\overrightarrow{h_{n}}, \overleftarrow{h_{n}} \in \mathbb{R}^{u}$。
     我们将这两个隐向量进行拼接得到隐向量 $h_n \in \mathbb{R}^{2u}$，即为文本序列中第 $n$ 个词连同其上下文信息的特征向量。
-    因此词向量特征矩阵经过 双向 LSTM 后得到的输出为 $V = (h_1, h_2, \dots, h_N) \in \mathbb{R}^{N \times 2u}$。
-    此外，我们在词的维度对隐向量矩阵取平均，将 $N$ 个词的所有信息融合到一个特征向量中，得到文本序列的一个统一特征表示向量 $\tilde{V} = avg(V) = avg(h_1, h_2, \dots, h_N)$
+    因此词向量特征矩阵经过 双向 LSTM 后得到的输出为 $V = \left(h_1, h_2, \dots, h_N\right) \in \mathbb{R}^{N \times 2u}$。
+    此外，我们在词的维度对隐向量矩阵取平均，将 $N$ 个词的所有信息融合到一个特征向量中，得到文本序列的一个统一特征表示向量 $\tilde{V} = avg\left(V\right) = avg\left(h_1, h_2, \dots, h_N\right)$
 
 
 \section{基于注意力的循环网络}
-    在提取出视频、文本、知识点体系等多模态信息的特征向量之后，我们将使用\textbf{基于注意力机制的循环神经网络(Hierarchical Attention-based Recurrent Layer, HARL)}\cite{Huang2019HierarchicalMT} 对输入每块视频的多模态信息进行整合和知识点预测。
+    在提取出视频、文本、知识点体系等多模态信息的特征向量之后，我们将使用\textbf{基于注意力机制的循环神经网络（Hierarchical Attention-based Recurrent Layer, HARL）}\cite{Huang2019HierarchicalMT} 对输入每块视频的多模态信息进行整合和知识点预测。
     HARL 是一个基于循环与注意力的模型，能够在层级知识点体系上自上而下地逐层预测知识点。
-    \textbf{基于注意力的记忆单元(Hierarchical Attention Memory unit, HAM)} 是 HARL 网络的基本单元，每一个 HAM 都是层级知识点体系中的某一层知识点的预测单元，多个 HAM 串联起来就构成了具有循环结构的 HARL。
+    \textbf{基于注意力的记忆单元（Hierarchical Attention Memory unit, HAM）} 是 HARL 网络的基本单元，每一个 HAM 都是层级知识点体系中的某一层知识点的预测单元，多个 HAM 串联起来就构成了具有循环结构的 HARL。
     HAM 原本是用于使用注意力机制捕获文本与知识点之间的关联，但只要我们对 HAM 内部实现稍作修改就可以用于捕获视频与文本、标签与文本等多模态信息之间的关联关系。
     除此之外，在对第 $h$ 层的知识点进行预测时，HAM 能够整合第 $h - 1$ 层的知识点预测结果来对本层知识点的预测产生影响，同时生成指导第 $h + 1$ 层进行知识点预测的信息。
     层级知识点体系从上到下通常伴随着知识点的逐渐细化与具体，HARL 自上而下、上层影响下层的预测方式也具有现实意义与合理性。
@@ -142,13 +142,13 @@
     \end{figure}
 
     HAM 主要包含三个模块，VTKA 模块、KPM 模块以及 KDM 模块。
-    在图 \ref{fig3.2} 中，每个 HAM 中用红色方框标注的部分即为 VTKA 模块，使用橙色方框标注的部分为 KPM 模块，绿色方框标注的部分为 KDM 模块。
+    在图 \ref{fig3.2} 中用红色方框标注的部分即为 VTKA 模块，使用橙色方框标注的部分为 KPM 模块，绿色方框标注的部分为 KDM 模块。
 
-    其中 VTKA 模块为\textbf{视频-文本-知识点注意力(Video-Text-Knowledge Attention)模块}。该模块接收视频、文本、当前层知识点表征以及来自上一层 HAM 的知识点预测的语义信息，
+    其中 VTKA 模块为\textbf{视频-文本-知识点注意力（Video-Text-Knowledge Attention）模块}。该模块接收视频、文本、当前层知识点表征以及来自上一层 HAM 的知识点预测的语义信息，
     结合这四个方面的信息来捕捉视频与文本、文本与当前层知识点之间的关联信息。
-    KPM 模块为\textbf{知识点预测(Knowledge Prediction Module)模块}。该模块主要接受来自 VTKA 模块捕捉到的多模态特征关联信息，结合初始的视频、文本多模态信息来对当前层的知识点进行预测。
+    KPM 模块为\textbf{知识点预测（Knowledge Prediction Module）模块}。该模块主要接受来自 VTKA 模块捕捉到的多模态特征关联信息，结合初始的视频、文本多模态信息来对当前层的知识点进行预测。
     同时 KPM 模块在进行知识点预测的过程中会生成一个包含了视频、文本与当前层知识点信息的统一特征向量。
-    KDM 模块为\textbf{知识点依赖模块(Knowledge Dependency Module)模块}。该模块接受来自 VTKA 的关联信息和 KPM 对当前层知识点的预测结果，根据这两个计算结果来获取多模态信息与当前层知识点之间的依赖关系。
+    KDM 模块为\textbf{知识点依赖模块（Knowledge Dependency Module）模块}。该模块接受来自 VTKA 的关联信息和 KPM 对当前层知识点的预测结果，根据这两个计算结果来获取多模态信息与当前层知识点之间的依赖关系。
     该依赖关系将被送到下一个 HAM 中，对下一层知识点的预测进行指导。
 
     对第 $h$ 层的 HAM，输入视频特征向量 $\boldsymbol{U}$，文本特征向量矩阵 $\boldsymbol{V}$，来自上一层的知识点依赖信息 $\boldsymbol{\omega^{h - 1}}$ 以及知识点特征向量 $\boldsymbol{K^h}$，各模块输出的计算公式为：
