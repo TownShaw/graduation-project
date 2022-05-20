@@ -130,16 +130,17 @@
     HAM 原本是用于使用注意力机制捕获文本与知识点之间的关联，但只要我们对 HAM 内部实现稍作修改就可以用于捕获视频与文本、标签与文本等多模态信息之间的关联关系。
     除此之外，在对第 $h$ 层的知识点进行预测时，HAM 能够整合第 $h - 1$ 层的知识点预测结果来对本层知识点的预测产生影响，同时生成指导第 $h + 1$ 层进行知识点预测的信息。
     层级知识点体系从上到下通常伴随着知识点的逐渐细化与具体，HARL 自上而下、上层影响下层的预测方式也具有现实意义与合理性。
-    HARL 网络的整体架构和 HAM 的内部实现如图 \ref{fig3.2} 所示。
+
+\subsection{基于注意力的记忆单元}
+    图 \ref{fig3.2} 给出了第 $h$ 层 HAM 的输出输入与内部计算流程。
 
     \begin{figure}[t]
         \centering
-        \includegraphics[width=1\linewidth]{HARL.pdf}
-        \caption{HARL}
+        \includegraphics[width=1\linewidth]{HAM.pdf}
+        \caption{HAM}
         \label{fig3.2}
     \end{figure}
 
-\subsection{基于注意力的记忆单元}
     HAM 主要包含三个模块，VTKA 模块、KPM 模块以及 KDM 模块。
     在图 \ref{fig3.2} 中，每个 HAM 中用红色方框标注的部分即为 VTKA 模块，使用橙色方框标注的部分为 KPM 模块，绿色方框标注的部分为 KDM 模块。
 
