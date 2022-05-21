@@ -11,8 +11,8 @@
 %
 
 \NeedsTeXFormat{LaTeX2e}[2017/04/15]
-\newcommand\ustcthesisversion{v3.3.1}
-\ProvidesClass{ustcthesis}[2021/12/10 {\ustcthesisversion} USTC thesis template]
+\newcommand\ustcthesisversion{3.3.3}
+\ProvidesClass{ustcthesis}[2022/05/17 {\ustcthesisversion} USTC thesis template]
 
 % 报错和警告
 \newcommand\ustc@error[1]{%
@@ -336,6 +336,13 @@
       black,
     },
     default = blue,
+  },
+  reviewer = {
+    choices = {
+      true,
+      false,
+    },
+    default = false,
   },
 }
 
@@ -943,13 +950,13 @@
 % Windows 的中易字体。
 \newcommand\ustc@set@cjk@font@windows{%
   \setCJKmainfont{SimSun}[
-    AutoFakeBold = 2,
+    AutoFakeBold = 3,
     ItalicFont   = KaiTi,
   ]%
-  \setCJKsansfont{SimHei}[AutoFakeBold = 2]%
+  \setCJKsansfont{SimHei}[AutoFakeBold = 3]%
   \setCJKmonofont{FangSong}%
-  \setCJKfamilyfont{zhsong}{SimSun}[AutoFakeBold = 2]%
-  \setCJKfamilyfont{zhhei}{SimHei}[AutoFakeBold = 2]%
+  \setCJKfamilyfont{zhsong}{SimSun}[AutoFakeBold = 3]%
+  \setCJKfamilyfont{zhhei}{SimHei}[AutoFakeBold = 3]%
   \setCJKfamilyfont{zhkai}{KaiTi}%
   \setCJKfamilyfont{zhfs}{FangSong}%
 }
@@ -1095,19 +1102,20 @@
     \ustcsetup{
       uppercase-greek = italic,
       integral        = upright,
-      integral-limits = true,
       partial         = upright,
       real-part       = roman,
     }%
     \ifustc@math@style@ISO
       \ustcsetup{
         less-than-or-equal = horizontal,
+        integral-limits    = true,
         math-ellipsis      = lower,
       }%
     \else
       \ifustc@math@style@GB
         \ustcsetup{
           less-than-or-equal = slanted,
+          integral-limits    = false,
           math-ellipsis      = centered,
         }%
       \fi
@@ -1742,9 +1750,11 @@
     July\or August\or September\or October\or November\or December%
   \fi
 }
+\newcommand\ustc@date@format@zh@short[3]{\number#1 年 \number#2 月}
 \newcommand\ustc@date@format@en[3]{\ustc@date@month{#2} \number#3, #1}
 \newcommand\ustc@date@zh@small{\ustc@format@date{\ustc@date@format@zh@small}{\ustc@date}}
 \newcommand\ustc@date@zh@big{\ustc@format@date{\ustc@date@format@zh@big}{\ustc@date}}
+\newcommand\ustc@date@zh@short{\ustc@format@date{\ustc@date@format@zh@short}{\ustc@date}}
 \newcommand\ustc@date@en{\ustc@format@date{\ustc@date@format@en}{\ustc@date}}
 
 % 版本 v3.2 开始使用 \cs{ustcsetup} 设置接口，
@@ -1952,6 +1962,8 @@
   \ustc@reset@main@language
 }
 
+\newbox\ustc@title@box
+
 % 本科生的封面
 \newcommand\ustc@title@page@bachelor{%
   \begin{titlepage}%
@@ -1964,44 +1976,60 @@
       \bfseries\fontsize{15bp}{16bp}\selectfont
       \setlength\tabcolsep{\z@}%
       \setlength\arrayrulewidth{1.5pt}%
-      \begin{tabular}{lp{140bp}lp{140bp}}
+      \begin{tabular}{lp{140bp}lp{140bp}}%
         题\quad 目 &
-          \multirow[t]{2}{325bp}{%
-            \centering\fontsize{15bp}{40bp}\selectfont
-            \ustc@title
-          } & & \\
-        \cline{2-4}
-        \noalign{\vskip 24bp}
+          \multicolumn{3}{c}{%
+            \multirow[t]{2}{325bp}{%
+              \savebox\ustc@title@box{%
+                \parbox[t]{325bp}{%
+                  \centering\fontsize{15bp}{40bp}\selectfont
+                  \ustc@title
+                }%
+              }%
+              \dp\ustc@title@box=0pt\relax
+              \usebox\ustc@title@box
+            }%
+          } \\
+        \cline{2-4}%
+        \noalign{\vskip 24bp}%
         & & & \\
-        \cline{2-4}
-        \noalign{\vskip 24bp}
+        \cline{2-4}%
+        \noalign{\vskip 24bp}%
         英\quad 文 &
-          \multirow[t]{3}{325bp}{%
-            \centering\fontsize{15bp}{40bp}\selectfont
-            \ustc@title@en
-          } & & \\
-        \cline{2-4}
-        \noalign{\vskip 24bp}
+          \multicolumn{3}{c}{%
+            \multirow[t]{3}{325bp}{%
+              \savebox\ustc@title@box{%
+                \parbox[t]{325bp}{%
+                  \centering\fontsize{15bp}{40bp}\selectfont
+                  \ustc@title@en
+                }%
+              }%
+              \dp\ustc@title@box=0pt\relax
+              \usebox\ustc@title@box
+            }%
+          } \\
+        \cline{2-4}%
+        \noalign{\vskip 24bp}%
         题\quad 目 & & & \\
-        \cline{2-4}
-        \noalign{\vskip 24bp}
+        \cline{2-4}%
+        \noalign{\vskip 24bp}%
         & & & \\
-        \cline{2-4}
-        \noalign{\vskip 24bp}
-        院\quad 系 & \multirow[t]{1}{325bp}{\centering\ustc@department} & & \\
-        \cline{2-4}
-        \noalign{\vskip 24bp}
-        姓\quad 名 & \multirow[t]{1}{140bp}{\centering\ustc@author} &
-        学\quad 号 & \multirow[t]{1}{140bp}{\centering\ustc@student@id} \\
-        \cline{2-2}
-        \cline{4-4}
-        \noalign{\vskip 24bp}
-        导\quad 师 & \multirow[t]{1}{325bp}{\centering\ustc@supervisor@names} & & \\
-        \cline{2-4}
-        \noalign{\vskip 24bp}
-        日\quad 期 & \multirow[t]{1}{325bp}{\centering\ustc@date@zh@small} & & \\
-        \cline{2-4}
-      \end{tabular}
+        \cline{2-4}%
+        \noalign{\vskip 24bp}%
+        院\quad 系 & \multicolumn{3}{c}{\ustc@department} \\
+        \cline{2-4}%
+        \noalign{\vskip 24bp}%
+        姓\quad 名 & \multicolumn{1}{c}{\ustc@author} &
+        学\quad 号 & \multicolumn{1}{c}{\ustc@student@id} \\
+        \cline{2-2}%
+        \cline{4-4}%
+        \noalign{\vskip 24bp}%
+        导\quad 师 & \multicolumn{3}{c}{\ustc@supervisor@names} \\
+        \cline{2-4}%
+        \noalign{\vskip 24bp}%
+        日\quad 期 & \multicolumn{3}{c}{\ustc@date@zh@small} \\
+        \cline{2-4}%
+      \end{tabular}%
     \endgroup
   \end{titlepage}%
 }
@@ -2080,6 +2108,12 @@
     \vskip 0.5cm%
     签字日期：\ustc@underline{}\hspace{2.7cm}%
     签字日期：\ustc@underline{}\par
+    \ifustc@reviewer@true
+      \vskip 1.5cm%
+      \hskip -1em%
+      评审专家签名：\ustc@underline{}\hspace{4.5em}%
+      评审专家签名：\ustc@underline{}\par
+    \fi
   \end{titlepage}%
 }
 \ifustc@degree@bachelor
@@ -2295,33 +2329,32 @@
     \chaptermark{#2}%
   }%
   \chapter*{#2}}
-  %
-  %
-  % \subsection{摘要}
-  %
-  % 中文摘要环境。
-  % 判断 \cs{ustc@tocloaded} 是为了防止本科生未调整摘要位置时的目录页码缺失。
+
+
+% \subsection{摘要}
+
+% 中文摘要环境。
 \newcommand\ustc@keywords@text{%
-  \ustc@clist@use{\ustc@keywords}{；}%
+  \ifustc@degree@graduate
+    \ustc@clist@use{\ustc@keywords}{\quad}%
+  \else
+    \ustc@clist@use{\ustc@keywords}{、}%
+  \fi
 }
 \newcommand\ustc@keywords@en@text{%
-  \ustc@clist@use{\ustc@keywords@en}{; }%
+  \ustc@clist@use{\ustc@keywords@en}{, }%
 }
 \newenvironment{abstract}{%
   \ustcsetup{language=chinese}%
-  \ifustc@degree@graduate
-    \ustc@chapter{摘要}%
-  \else
-    \chapter{中文内容摘要}%
-    \ifustc@tocloaded\else
-      本科生需要手动将摘要置于目录后。\par
-    \fi
-  \fi
+  \ustc@chapter{摘要}%
 }{
   \par\null\par\noindent\hangindent=4\ccwd\relax
   \textbf{关键词}：\ustc@keywords@text\par
   \ustc@reset@main@language
 }
+
+\newbox\ustc@keywords@box
+\newlength\ustc@keywords@width
 
 % 英文摘要环境
 \newenvironment{abstract*}{%
@@ -2330,13 +2363,17 @@
     \ustc@chapter[Abstract]{ABSTRACT}%
   \else
     \begingroup
-      \ctexset{chapter/format=\centering\fontsize{16bp}{29.33bp}\selectfont}%
-      \chapter[英文内容摘要]{Abstract}%
+      % 本科生的英文摘要使用小二号衬线体
+      \ctexset{chapter/format=\centering\fontsize{18bp}{33bp}\selectfont}%
+      \ustc@chapter{ABSTRACT}%
     \endgroup
   \fi
 }{
-  \par\null\par\noindent\hangindent=5.3em\relax
-  \textbf{Key Words}: \ustc@keywords@en@text\par
+  \par\null\par\noindent
+  \savebox\ustc@keywords@box{\textbf{Key Words}: }%
+  \ustc@keywords@width=\linewidth
+  \advance\ustc@keywords@width-\wd\ustc@keywords@box
+  \textbf{Key Words}: \parbox[t]{\ustc@keywords@width}{\ustc@keywords@en@text\par}\par
   \ifustc@degree@graduate
     \cleardoublepage
   \fi
@@ -2353,9 +2390,6 @@
 
 % \subsection{目录}
 
-% 判断是否已经加载目录，用于提醒本科生更改摘要和致谢的顺序。
-\newif\ifustc@tocloaded
-
 % 研究生规定目录另面起；
 % 本科生规定从目录开始编页码，所以必须另页起。
 \renewcommand\tableofcontents{%
@@ -2363,7 +2397,6 @@
     \cleardoublepage
     \pagenumbering{arabic}%
     \pagestyle{plain}%
-    \ustc@tocloadedtrue
   \fi
   \ustc@chapter{\contentsname}%
   \@starttoc{toc}%
@@ -3042,15 +3075,17 @@
 % 定义了一个满足要求的致谢环境：
 \newenvironment{acknowledgements}{%
   \@mainmatterfalse
-  \ifustc@degree@graduate
-    \chapter{\ustc@acknowledgements@name}%
-  \else
-    \ustc@chapter{\ustc@acknowledgements@name}%
-    \ifustc@tocloaded
-      \par
-    \fi
+  \chapter{\ustc@acknowledgements@name}%
+}{
+  \ifustc@degree@bachelor
+    \par
+    \null\par
+    \begingroup
+      \raggedleft
+      \ustc@date@zh@short\par
+    \endgroup
   \fi
-}{}
+}
 
 
 % 兼容旧版本中“acknowledgments”的拼法。
@@ -3317,7 +3352,7 @@
   \newcommand\ustc@set@siunitx@language{%
     \ifustc@language@chinese
       \sisetup{
-        list-final-separator = { 和 },
+        list-final-separator = { 和~},
         list-pair-separator  = { 和 },
         range-phrase         = {～},
       }%

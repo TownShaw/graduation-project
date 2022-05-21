@@ -113,7 +113,7 @@
 \title{\cls{ustcthesis} 使用说明}
 \author{Zeping Lee\thanks{zepinglee AT gmail.com} \and
         seisman\thanks{seisman.info AT gmail.com} }
-\date{v3.3.1\qquad 2021-12-10}
+\date{v3.3.3\qquad 2022-05-17}
 \maketitle
 
 
@@ -364,37 +364,15 @@ Windows 用户可能无法使用GNU make，使用 |latexmk| 也是一个比较�
 
 \section{论文内容}
 
-研究生论文的内容按照以下顺序排列：
-\begin{description}
-  \item[title page] 中文封面，英文封面，原创性声明及授权使用说明
-  \item[front matter] 中、英文摘要，目录，图、表清单，符号说明
-  \item[main matter] 正文章节，参考文献
-  \item[appendix] 附录
-  \item[back matter] 致谢，已发表论文列表
-\end{description}
-
-本科生论文的内容按照以下顺序排列：
-\begin{description}
-  \item[title page] 中文封面，英文封面
-  \item[front matter] 致谢，目录，中、英文摘要
-  \item[main matter] 正文章节，参考文献
-  \item[appendix] 附录
-\end{description}
-
-示例文档 \file{main.tex} 中的致谢、目录等章节的顺序，是按照研究生论文的格式组
-织内容的，\emph{本科生需要手动调整顺序}。
-
-
-\subsection{封面}
+\subsection{封面与声明}
 
 “封面”的名字让人有些混淆，它既可以指由印刷厂统一制作的硬皮封面（cover），也可
 以指书打开后的第一页（title page）。在这里指的是后者，所以本模板从 title page
 开始。
 
 \DescribeMacro{\maketitle}
-\DescribeMacro{\copyrightpage}
-封面和声明页分别由 \cs{maketitle} 和 \cs{copyrightpage} 命令生成，
-其中的各项信息使用 \cs{ustcsetup} 命令的方式填写，如：
+封面由 \cs{maketitle} 命令生成，其中的各项信息使用 \cs{ustcsetup} 命令以
+key-value 的方式填写，如：
 \begin{latex}
   \ustcsetup{
     title  = {论文中文题目},
@@ -427,8 +405,16 @@ Windows 用户可能无法使用GNU make，使用 |latexmk| 也是一个比较�
   \item 其中带 |*| 后缀的选项用于设置英文封面。
   \item 导师姓名 \opt{supervisor} 允许多个姓名，使用“,”（西文逗号 U+002C）隔开。
   \item 软件工程专业使用 \opt{advisor} 和 \opt{advisor*} 设置企业导师的姓名。
-  \item 完成时间 \opt{date} 应使用 ISO 格式，默认为当前日期。
+  \item 完成时间 \opt{date} 应使用 ISO 格式（yyyy-mm-dd），默认为当前日期。
 \end{itemize}
+
+\DescribeMacro{\copyrightpage}
+声明页由 \cs{copyrightpage} 命令生成。模板会根据 \opt{secret-level} 和
+\opt{secret-year} 的内容自动填写。
+
+\DescribeOption{reviewer}
+有的院系额外要求声明页有“评审专家签名”，可以在模板中使用 \cs{ustcsetup} 命令设置
+\opt{reviewer = true}。
 
 
 \subsection{摘要和章节}
@@ -448,12 +434,15 @@ Windows 用户可能无法使用GNU make，使用 |latexmk| 也是一个比较�
 
 \DescribeOption{keywords}
 \DescribeOption{keywords*}
-摘要的关键词应使用 \cs{ustcsetup} 的接口进行设置，
-只要在摘要结束前即可，比如：
+摘要的关键词应使用 \cs{ustcsetup} 的接口进行设置，在录入时使用西文逗号隔开，
+比如：
 \begin{latex}
   \begin{abstract}
     这里是摘要。
-    \ustcsetup{keywords = {论文；摘要；关键词}}
+    \ustcsetup{
+      keywords  = {学位论文, 摘要, 关键词},
+      keywords* = {dissertation, abstract, keywords},
+    }
   \end{abstract}
 \end{latex}
 
@@ -535,7 +524,7 @@ Windows 用户可能无法使用GNU make，使用 |latexmk| 也是一个比较�
     uppercase-greek    = italic,
     less-than-or-equal = slanted,
     integral           = upright,
-    integral-limits    = true,
+    integral-limits    = false,
     partial            = upright,
     math-ellipsis      = centered,
     real-part          = roman,
@@ -575,7 +564,7 @@ Windows 用户可能无法使用GNU make，使用 |latexmk| 也是一个比较�
 模板作了处理，用户可以直接使用这些宏包的命令，如 \cs{bm}、\cs{mathscr}、
 \cs{uppi}。
 
-另外，模板还为 `math-font` 提供了传统的 Type 1 字体 \opt{newtx}。
+另外，模板还为 \opt{math-font} 提供了传统的 Type 1 字体 \opt{newtx}。
 该选项会调用 \pkg{newtxmath} 宏包。
 但是，如果西文字体已经使用了 OpenType 的 Times New Roman，
 混用 Type 1 字体可能会导致问题，尤其是使用 \pkg{siunitx} 宏包时。
@@ -666,7 +655,7 @@ BibLaTeX 是较新的参考文献处理方案。
 并且在导言区使用 \cs{addbibresource} 设置数据库的路径，
 最后在参考文献表的位置使用 \cs{printbibliography} 输出。
 \begin{latex}
-  \usepackage[style=ustcthesis-author-year]{biblatex}
+  \usepackage[style=ustcthesis-authoryear]{biblatex}
   \addbibresource{bib/ustc.bib}
 \end{latex}
 使用 BibLaTeX 必须用 \file{biber} 编译生成参考文献表。
@@ -678,7 +667,8 @@ BibLaTeX 是较新的参考文献处理方案。
 如果要切换为与正文平排，一种方法是使用 \cs{parencite}，
 另一种是载入 \pkg{biblatex} 时统一设置。
 \begin{latex}
-  \usepackage[bibstyle=ustcthesis-numeric,citestyle=ustcthesis-inline]{biblatex}
+  \usepackage[bibstyle=ustcthesis-numeric,
+              citestyle=ustcthesis-inline]{biblatex}
 \end{latex}
 
 

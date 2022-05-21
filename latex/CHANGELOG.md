@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.3.3] - 2022-05-17
+
+### Added
+
+- 新增选项 `reviewer` 选择是否在声明页显示“评审专家签名”（[#334](https://github.com/ustctug/ustcthesis/issues/334)）。
+
+### Changed
+
+- 更新 2022 年 3 月版本科生的参考文献格式（[#346](https://github.com/ustctug/ustcthesis/issues/346)）。
+- 研究生的关键词分隔符为空一字和“, ”。
+
+### Fixed
+
+- 修正 `biblatex` 的参考文献表中期刊名的大小写（[#338](https://github.com/ustctug/ustcthesis/issues/338)）。
+- 消除本科生封面的 overfull box 警告（[#345](https://github.com/ustctug/ustcthesis/issues/345)）。
+- 修正本科生的关键词分隔符为“、”和“, ”（[#354](https://github.com/ustctug/ustcthesis/issues/354)）。
+
+## [3.3.2] - 2022-03-25
+
 ### Added
 
 - 新增选项 `math-font = cm` (Computer Modern)（[#324](https://github.com/ustctug/ustcthesis/issues/324)）。
@@ -15,12 +34,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - 专业学位类型 `professional-type` 为空时不再显示括号（[#325](https://github.com/ustctug/ustcthesis/issues/325)）。
+- 本科生的英文摘要标题改为小二号“ABSTRACT”（2021 年 11 月新版，[#332](https://github.com/ustctug/ustcthesis/issues/332)）。
+- 本科生的目录中去掉摘要（2021 年 11 月新版）。
+- 调整本科生的章节顺序（2021 年 11 月新版）。
+- 本科生的目录中加入致谢（2021 年 11 月新版）。
+- 本科生致谢的末尾增加日期（2021 年 11 月新版）。
 
 ### Fixed
 
 - 修复了载入 `natbib` 前设置 `cite-style` 无效的问题（[#327](https://github.com/ustctug/ustcthesis/issues/327)）。
 
-## [v3.3.1] - 2021-12-10
+## [3.3.1] - 2021-12-10
 
 ### Changed
 
@@ -41,13 +65,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 修正授权使用声明中的“保密”为“控阅”（[#314](https://github.com/ustctug/ustcthesis/issues/314)）。
 - 修正本科生参考文献的格式。
 - 修正了图题的段后距离（[#307](https://github.com/ustctug/ustcthesis/issues/307)）。
-- 参考文献表中专利文献使用 `address`/`lcoation` 输出专利国别。
+- 参考文献表中专利文献使用 `address`/`location` 输出专利国别。
 
 ### Removed
 
 - 去掉了 `siunitx` 的 `inter-unit-product` 设置。
 
-## [v3.3.0] - 2021-03-18
+## [3.3.0] - 2021-03-18
 
 ### Added
 
@@ -70,7 +94,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 修正参考文献中期刊的页码前的空格（[#264](https://github.com/ustctug/ustcthesis/issues/264)）。
 
 
-## [v3.2.1] - 2020-04-03
+## [3.2.1] - 2020-04-03
 
 ### Added
 
@@ -273,11 +297,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 优化图注、算法的行距。
 - 二级以下节标题编号下采用“1.”、“(1)”、“①”。
 
-[Unreleased]: https://github.com/ustctug/ustcthesis/compare/v3.3.1...HEAD
-[v3.3.1]: https://github.com/ustctug/ustcthesis/compare/v3.3.0...v3.3.1
-[v3.3.0]: https://github.com/ustctug/ustcthesis/compare/v3.2.1...v3.3.0
-[v3.2.1]: https://github.com/ustctug/ustcthesis/compare/v3.2...v3.2.1
-[3.1.06]: https://github.com/ustctug/ustcthesis/compare/v3.2...v3.1.06
+[Unreleased]: https://github.com/ustctug/ustcthesis/compare/v3.3.3...HEAD
+[3.3.3]: https://github.com/ustctug/ustcthesis/compare/v3.3.2...v3.3.3
+[3.3.2]: https://github.com/ustctug/ustcthesis/compare/v3.3.1...v3.3.2
+[3.3.1]: https://github.com/ustctug/ustcthesis/compare/v3.3.0...v3.3.1
+[3.3.0]: https://github.com/ustctug/ustcthesis/compare/v3.2.1...v3.3.0
+[3.2.1]: https://github.com/ustctug/ustcthesis/compare/v3.2...v3.2.1
+[3.2]: https://github.com/ustctug/ustcthesis/compare/v3.2...v3.1.06
 [3.1.06]: https://github.com/ustctug/ustcthesis/compare/v3.1.05...v3.1.06
 [3.1.05]: https://github.com/ustctug/ustcthesis/compare/v3.1.04...v3.1.05
 [3.1.04]: https://github.com/ustctug/ustcthesis/compare/v3.1.03...v3.1.04
