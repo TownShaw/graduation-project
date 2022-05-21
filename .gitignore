@@ -17,7 +17,8 @@ model/
 
 
 # latex
-latex/
+latex/main.pdf
+latex/ustcthesis-doc.pdf
 
 
 # cache
