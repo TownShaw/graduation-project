@@ -304,7 +304,7 @@
     \end{equation}
     最终，通过对 $P_{LV}$ 和 $P_{GV}$ 进行加权平均，得到整个视频的最终预测分数 $P_{FV} \in \mathbb{R}^{C}$：
     \begin{equation}
-        P_{FV} = (1 - \alpha) \cdot P_{LV} + \alpha \cdot P_{GV}
+        P_{FV} = (1 - \alpha) \cdot \tilde{P}_{LV} + \alpha \cdot P_{GV}
     \end{equation}
     其中参数 $\alpha$ 与计算某个视频块所用的参数 $\alpha$ 相同。
 
