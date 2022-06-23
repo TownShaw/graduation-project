@@ -136,19 +136,20 @@ def train(config: dict):
                 auprc = average_precision_score(eval_labels, outputs, average="micro")
                 logger.info("Epoch: {}, Step: {}, Train Loss: {:.4f},\
 Precsion: {:.4f}, Recall: {:.4f}, Micro-F1: {:.4f}, AUPRC: {:.4f}, EMR: {:.4f}".format(epoch + 1,
-                                                                                 tmp_step,
-                                                                                 total_loss / 100,
-                                                                                 precision,
-                                                                                 recall,
-                                                                                 f1,
-                                                                                 auprc,
-                                                                                 EMR))
+                                                                                       tmp_step,
+                                                                                       total_loss / 100,
+                                                                                       precision,
+                                                                                       recall,
+                                                                                       f1,
+                                                                                       auprc,
+                                                                                       EMR))
                 outputs_list = []
                 labels_list = []
                 total_loss = 0.0
 
         model.eval()
         TP, FP, FN = 0, 0, 0
+        total_scores, total_labels = [], []
         for eval_batch in tqdm.tqdm(khan_dataloader_validation):
             for mini_eval_batch in utils.iter_batch_data(eval_batch, max_segment_num):
                 subtitles = mini_eval_batch["subtitles"].to(config["device"])

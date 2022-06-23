@@ -1,7 +1,7 @@
 '''
 @Author: Xiao Tong
 @FileName: train.py
-@CreateTime: 2022-03-22 22:23:46
+@CreateTime: 2022-04-30 20:01:59
 @Description:
 
 '''
@@ -14,9 +14,9 @@ import yaml
 import torch
 import numpy as np
 import torch.utils.data
-import utils.utils as utils
+import utils as utils
 from dataset import KhanDataset, collate_fn
-from harnn import HARNN, HierarchyLossWithSegments
+from model import ResNetTextCNN
 from sklearn.metrics import average_precision_score
 
 
@@ -27,8 +27,7 @@ def set_seed(seed):
 
 
 def train(config: dict):
-    model_name = ".".join(config["data"]["model_name"].split(".")[:-2])
-    logger = utils.getLogger(config["log"]["log_dir"], model_name=model_name, name=config["log"]["name"])
+    logger = utils.getLogger(config["log"]["log_dir"], name=config["log"]["name"])
 
     word2vec_file = config["data"]["word2vec"]
     logger.info("Loading pretrained word embedding from '{0}'".format(word2vec_file))
@@ -36,9 +35,9 @@ def train(config: dict):
 
     sample_dir = config["data"]["sample_dir"]
     logger.info("Loading data from '{0}'".format(sample_dir))
-    datasets = json.load(open("data/dataset.json"))
-    # train_set = ["00fgAG6VrRQ"]
+    # train_set = ["00fgAG6VrRQ", "5wUJLMWZ5Fw"]
     # validation_set = os.listdir("data/samples_test")
+    datasets = json.load(open("data/dataset.json"))
     train_set, validation_set = datasets["train_set"], datasets["validation_set"]
 
     khan_dataset_train = KhanDataset(config, train_set, word2idx=word2idx)
@@ -53,7 +52,7 @@ def train(config: dict):
                                                              collate_fn=collate_fn)
 
     best_auprc = 0.0
-    model = HARNN(config, len(word2idx), pretrained_word_embedding=pretrained_embedding)
+    model = ResNetTextCNN(config, len(word2idx), pretrained_word_embedding=pretrained_embedding)
     model_save_path = os.path.join(config["data"]["model_save_dir"], config["data"]["model_name"])
     if not os.path.isdir(config["data"]["model_save_dir"]):
         os.mkdir(config["data"]["model_save_dir"])
@@ -62,13 +61,13 @@ def train(config: dict):
         checkpoint = torch.load(model_save_path, map_location="cpu")
         model.load_state_dict(checkpoint["model_state_dict"])
         best_auprc = checkpoint["best_auprc"]
-    logger.info("Best-AUPRC: {}".format(best_auprc))
+    logger.info("Best-F1: {}".format(best_auprc))
     model = model.to(config["device"])
 
     optim = torch.optim.Adam(model.parameters(), lr=config["model"]["learning_rate"])
-    loss_fn = HierarchyLossWithSegments()
+    loss_fn = torch.nn.BCELoss()
 
-    max_segment_num = 32
+    max_segment_num = 48
     logger.info("Start training ...")
 
     # run an eval epoch before training
@@ -84,7 +83,7 @@ def train(config: dict):
             segments = mini_eval_batch["segments"]
             image_segments = mini_eval_batch["image_segments"]
 
-            _, video_scores = model(images, (subtitles, lens), segments, image_segments)
+            video_scores = model(images, subtitles, segments, image_segments)
             mini_TP, mini_FP, mini_FN = utils.metric(video_scores.cpu().detach().numpy(),
                                                      labels.cpu().detach().numpy(),
                                                      threshold=config["model"]["threshold"],
@@ -94,11 +93,11 @@ def train(config: dict):
             FN += mini_FN
             total_scores.append(video_scores.cpu().detach().numpy())
             total_labels.append(labels.cpu().detach().numpy())
-    precision, recall, f1 = utils.calculate(TP, FP, FN)
     total_scores = np.concatenate(total_scores, axis=0)
     total_labels = np.concatenate(total_labels, axis=0)
-    EMR = utils.metric_EMR(total_scores, total_labels, threshold=config["model"]["threshold"])
-    auprc = average_precision_score(total_labels, total_scores, average="micro")
+    auprc = average_precision_score(total_labels, total_scores)
+    EMR = utils.metric_EMR(total_scores, total_labels)
+    precision, recall, f1 = utils.calculate(TP, FP, FN)
     logger.info("Eval Results: Micro-Precision: {:.4f}, Micro-Recall: {:.4f}, Micro-F1: {:.4f}, AUPRC: {:.4f}, EMR: {:.4f}".format(precision, recall, f1, auprc, EMR))
     logger.info("Eval Best-AUPRC: {:.4f}".format(best_auprc))
 
@@ -119,8 +118,8 @@ def train(config: dict):
                 image_segments = mini_batch["image_segments"]
 
                 optim.zero_grad()
-                section_scores, video_scores = model(images, (subtitles, lens), segments, image_segments)
-                loss = loss_fn(section_scores, video_scores, labels, segments)
+                video_scores = model(images, subtitles, segments, image_segments)
+                loss = loss_fn(video_scores, labels)
                 loss.backward()
                 optim.step()
 
@@ -137,8 +136,8 @@ def train(config: dict):
                                           threshold=config["model"]["threshold"],
                                           num_classes_list=config["data"]["num_classes_list"])
                 precision, recall, f1 = utils.calculate(TP, FP, FN)
-                EMR = utils.metric_EMR(outputs, eval_labels, threshold=config["model"]["threshold"])
-                auprc = average_precision_score(eval_labels, outputs, average="micro")
+                auprc = average_precision_score(eval_labels, outputs)
+                EMR = utils.metric_EMR(outputs, eval_labels)
                 logger.info("Epoch: {}, Step: {}, Train Loss: {:.4f},\
 Precsion: {:.4f}, Recall: {:.4f}, Micro-F1: {:.4f}, AUPRC: {:.4f}, EMR: {:.4f}".format(epoch + 1,
                                                                                        tmp_step,
@@ -164,7 +163,7 @@ Precsion: {:.4f}, Recall: {:.4f}, Micro-F1: {:.4f}, AUPRC: {:.4f}, EMR: {:.4f}".
                 segments = mini_eval_batch["segments"]
                 image_segments = mini_eval_batch["image_segments"]
 
-                _, video_scores = model(images, (subtitles, lens), segments, image_segments)
+                video_scores = model(images, subtitles, segments, image_segments)
                 mini_TP, mini_FP, mini_FN = utils.metric(video_scores.cpu().detach().numpy(),
                                                          labels.cpu().detach().numpy(),
                                                          threshold=config["model"]["threshold"],
@@ -175,11 +174,11 @@ Precsion: {:.4f}, Recall: {:.4f}, Micro-F1: {:.4f}, AUPRC: {:.4f}, EMR: {:.4f}".
                 FN += mini_FN
                 total_scores.append(video_scores.cpu().detach().numpy())
                 total_labels.append(labels.cpu().detach().numpy())
-        precision, recall, f1 = utils.calculate(TP, FP, FN)
         total_scores = np.concatenate(total_scores, axis=0)
         total_labels = np.concatenate(total_labels, axis=0)
-        EMR = utils.metric_EMR(total_scores, total_labels, threshold=config["model"]["threshold"])
-        auprc = average_precision_score(total_labels, total_scores, average="micro")
+        auprc = average_precision_score(total_labels, total_scores)
+        EMR = utils.metric_EMR(total_scores, total_labels)
+        precision, recall, f1 = utils.calculate(TP, FP, FN)
         if best_auprc < auprc:
             best_auprc = auprc
             checkpoint = {"model_state_dict": model.state_dict(), "best_auprc": best_auprc}
@@ -191,7 +190,7 @@ Precsion: {:.4f}, Recall: {:.4f}, Micro-F1: {:.4f}, AUPRC: {:.4f}, EMR: {:.4f}".
 if __name__ == "__main__":
     set_seed(2022)
 
-    config_dir = "config"
-    config_file = "HARNN.Khan.yaml"
+    config_dir = "baseline/TextCNN"
+    config_file = "TextCNN.Khan.yaml"
     config = yaml.load(open(os.path.join(config_dir, config_file), "r", encoding="utf-8"), Loader=yaml.FullLoader)
-    train(config=config)
+    train(config)
