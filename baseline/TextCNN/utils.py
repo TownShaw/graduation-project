@@ -107,26 +107,24 @@ def load_khan_data_by_id(filepath: str,
     if pad_word not in word2idx:
         raise KeyError("'{0}' is not in word2idx!".format(pad_word))
 
-    images, subtitles, lens = [], [], []
+    subtitles, lens = [], []
     data = pickle.load(open(filepath, "rb"))
-    images, subtitles = data["keyframes"], data["subtitles"]
+    subtitles = data["subtitles"]
     lens = []
     for idx, section_subtitles in enumerate(subtitles):
         section_subtitles, section_lens = tokenize_and_pad(section_subtitles, stopwords, word2idx, max_seq_len=max_seq_len, pad_word=pad_word)
         subtitles[idx] = section_subtitles
         lens.append(section_lens)
-    return images, subtitles, lens
+    return subtitles, lens
 
 
 def iter_batch_data(batch: dict, max_item_num: int):
     """
     
     """
-    images, subtitles, lens, labels, segments = batch["images"], batch["subtitles"], batch["lens"], batch["labels"], batch["segments"]
-    image_segments = batch["image_segments"]
-    mini_batch = {"images": [], "subtitles": [], "lens": [], "labels": [], "segments": [], "image_segments": []}
+    subtitles, lens, labels, segments = batch["subtitles"], batch["lens"], batch["labels"], batch["segments"]
+    mini_batch = {"subtitles": [], "lens": [], "labels": [], "segments": []}
     segment_num_per_video = [sum(segments[idx]) for idx in range(len(segments))]
-    image_num_per_video = [sum(image_segments[idx]) for idx in range(len(image_segments))]
     index = 0
     while index < len(segments):
     # for idx, segment in enumerate(segments):
@@ -136,23 +134,18 @@ def iter_batch_data(batch: dict, max_item_num: int):
                 or (curr_item_num == 0 and segment_num_per_video[index] > max_item_num)):      # 如果单个 video 的 segment 数量大于 max_item_num 则强行塞进去
             start_idx = sum(segment_num_per_video[:index])
             end_idx = sum(segment_num_per_video[:index + 1])
-            image_start_idx = sum(image_num_per_video[:index])
-            image_end_idx = sum(image_num_per_video[:index + 1])
-            mini_batch["images"].append(images[image_start_idx:image_end_idx])
             mini_batch["subtitles"].append(subtitles[start_idx:end_idx])
             mini_batch["lens"].append(lens[start_idx:end_idx])
             mini_batch["labels"].append(labels[index])
             mini_batch["segments"].append(segments[index])
-            mini_batch["image_segments"].append(image_segments[index])
             curr_item_num += segment_num_per_video[index]
             index += 1
-        mini_batch["images"] = torch.cat(mini_batch["images"], dim=0)
         mini_batch["subtitles"] = torch.cat(mini_batch["subtitles"], dim=0)
         mini_batch["lens"] = torch.cat(mini_batch["lens"], dim=0)
         mini_batch["labels"] = torch.stack(mini_batch["labels"], dim=0)
 
         yield mini_batch
-        mini_batch = {"images": [], "subtitles": [], "lens": [], "labels": [], "segments": [], "image_segments": []}
+        mini_batch = {"subtitles": [], "lens": [], "labels": [], "segments": []}
 
 
 
@@ -212,3 +205,9 @@ def calculate(TP: int, FP: int, FN: int):
     if (precision + recall) > 0:
         f1 = 2 * precision * recall / (precision + recall)
     return precision, recall, f1
+
+
+def metric_EMR(predicts: np.ndarray, labels: np.ndarray, threshold: float=0.5):
+    predict_labels = (predicts >= threshold).astype(np.float32)
+    EMR = np.sum((predict_labels == labels).all(axis=-1).astype(np.int32)) / len(labels)
+    return EMR

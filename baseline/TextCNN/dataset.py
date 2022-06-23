@@ -28,15 +28,15 @@ class KhanDataset(Dataset):
     def __getitem__(self, idx):
         fileid = self.fileids[idx]
         filepath = os.path.join(self.config["data"]["sample_dir"], fileid, fileid + ".keyframes.pkl")
-        images, subtitles, lens = load_khan_data_by_id(filepath,
-                                                       self.word2idx,
-                                                       self.stopwords,
-                                                       max_seq_len=self.config["model"]["max_seq_len"],
-                                                       pad_word=self.config["model"]["pad_word"])
+        subtitles, lens = load_khan_data_by_id(filepath,
+                                               self.word2idx,
+                                               self.stopwords,
+                                               max_seq_len=self.config["model"]["max_seq_len"],
+                                               pad_word=self.config["model"]["pad_word"])
 
         label = self.id2labels[fileid]
         multi_hot_label = torch.FloatTensor([1. if i in label else 0. for i in range(self.num_classes)])
-        return images, subtitles, lens, multi_hot_label
+        return subtitles, lens, multi_hot_label
 
     def __len__(self):
         return len(self.fileids)
