@@ -241,3 +241,9 @@ def calculate(TP: int, FP: int, FN: int):
     if (precision + recall) > 0:
         f1 = 2 * precision * recall / (precision + recall)
     return precision, recall, f1
+
+
+def metric_EMR(predicts: np.ndarray, labels: np.ndarray, threshold: float=0.5):
+    predict_labels = (predicts >= threshold).astype(np.float32)
+    EMR = np.sum((predict_labels == labels).all(axis=-1).astype(np.int32)) / len(labels)
+    return EMR
