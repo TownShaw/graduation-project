@@ -1,5 +1,5 @@
 log:
-  name: TextCNN_ResNet
+  name: LSTM
   log_dir: logs
 data:
   name: Khan
@@ -14,7 +14,7 @@ data:
   index2know: data/Khan.index2know.pkl
   word2vec: data/word2vec/glove.6B.100d.txt
   model_save_dir: models
-  model_name: TextCNN_ResNet.Khan.model
+  model_name: LSTM.Khan.model
   num_classes: 398
   num_classes_list: [6, 42, 350]
 
@@ -22,10 +22,10 @@ model:
   epochs: 20
   batch_size: 12
   pad_word: <unk>
-  max_seq_len: 300
+  max_seq_len: 200
   word_embedding_dim: 100
-  out_channel: 100
-  kernel_size: [2, 3, 4]
+  rnn_dim: 256
+  rnn_num_layers: 1
   learning_rate: 0.001
   alpha: 0.5
   dropout: 0.5
