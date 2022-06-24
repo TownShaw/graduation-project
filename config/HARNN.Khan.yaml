@@ -28,7 +28,8 @@ model:
   Encoder: Transformer
 
   # transformer
-  nhead: 10
+  nhead: 2
+  num_encoder_layers: 2
 
   # bi-rnn
   rnn_dim: 256

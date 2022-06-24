@@ -57,7 +57,7 @@ class Transformer(torch.nn.Module):
     def __init__(self,
                  d_model: int,
                  nhead: int,
-                 num_encoder_layers: int=6,
+                 num_encoder_layers: int=2,
                  dropout: float=0.1,
                  layer_norm_eps: float=0.00001) -> None:
         super(Transformer, self).__init__()
@@ -122,7 +122,8 @@ class HARNN(torch.nn.Module):
                             pretrained_label_embedding=pretrained_label_embedding)
         elif config["model"]["Encoder"] == "Transformer":
             self.encoder = Transformer(d_model=config["model"]["word_embedding_dim"],
-                                       nhead=config["model"]["nhead"])
+                                       nhead=config["model"]["nhead"],
+                                       num_encoder_layers=config["model"]["num_encoder_layers"])
             self.harl = HARL(word_feature_dim=config["model"]["word_embedding_dim"],
                             image_feature_dim=self.resnet.fc.out_features,
                             label_embedding_dim=config["model"]["label_embedding_dim"],
