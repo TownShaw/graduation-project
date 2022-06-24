@@ -8,6 +8,7 @@
 
 import torch
 from harl import HARL
+from torch.nn import TransformerEncoderLayer, LayerNorm, TransformerEncoder
 from torch.nn.init import xavier_normal_
 from torchvision.models import resnet34
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
@@ -49,6 +50,35 @@ class BiRNNLayer(torch.nn.Module):
         return output, avg_output
 
 
+class Transformer(torch.nn.Module):
+    """
+    tranformer encoder
+    """
+    def __init__(self,
+                 d_model: int,
+                 nhead: int,
+                 num_encoder_layers: int=6,
+                 dropout: float=0.1,
+                 layer_norm_eps: float=0.00001) -> None:
+        super(Transformer, self).__init__()
+        self.transformer_encoder_layer = TransformerEncoderLayer(d_model=d_model,
+                                                                 nhead=nhead,
+                                                                 dropout=dropout,
+                                                                 layer_norm_eps=layer_norm_eps)
+        self.encoder_norm = LayerNorm(d_model, eps=layer_norm_eps)
+        self.transformer_encoder = TransformerEncoder(self.transformer_encoder_layer, num_encoder_layers, self.encoder_norm)
+
+    def forward(self, input_x, lens):
+        output = self.transformer_encoder(input_x)
+        avg_output = []
+        lens = lens.tolist()
+        for idx in range(len(lens)):
+            avg = torch.mean(output[idx, :lens[idx], :], dim=0)
+            avg_output.append(avg)
+        avg_output = torch.stack(avg_output, dim=0)
+        return output, avg_output
+
+
 class HierarchyLossWithSegments(torch.nn.Module):
     def __init__(self):
         super(HierarchyLossWithSegments, self).__init__()
@@ -79,17 +109,29 @@ class HARNN(torch.nn.Module):
                                         embedding_dim=config["model"]["word_embedding_dim"],
                                         pretrained_word_matrix=pretrained_word_embedding)
 
-        self.bi_rnn = BiRNNLayer(in_dim=config["model"]["word_embedding_dim"],
-                                 hidden_dim=config["model"]["rnn_dim"],
-                                 num_layers=config["model"]["rnn_num_layers"],
-                                 dropout=config["model"]["dropout"])
+        if config["model"]["Encoder"] == "Bi-RNN":
+            self.encoder = BiRNNLayer(in_dim=config["model"]["word_embedding_dim"],
+                                      hidden_dim=config["model"]["rnn_dim"],
+                                      num_layers=config["model"]["rnn_num_layers"],
+                                      dropout=config["model"]["dropout"])
+            self.harl = HARL(word_feature_dim=2 * config["model"]["rnn_dim"],
+                            image_feature_dim=self.resnet.fc.out_features,
+                            label_embedding_dim=config["model"]["label_embedding_dim"],
+                            num_classes_list=config["data"]["num_classes_list"],
+                            fc_dim=config["model"]["fc_dim"],
+                            pretrained_label_embedding=pretrained_label_embedding)
+        elif config["model"]["Encoder"] == "Transformer":
+            self.encoder = Transformer(d_model=config["model"]["word_embedding_dim"],
+                                       nhead=config["model"]["nhead"])
+            self.harl = HARL(word_feature_dim=config["model"]["word_embedding_dim"],
+                            image_feature_dim=self.resnet.fc.out_features,
+                            label_embedding_dim=config["model"]["label_embedding_dim"],
+                            num_classes_list=config["data"]["num_classes_list"],
+                            fc_dim=config["model"]["fc_dim"],
+                            pretrained_label_embedding=pretrained_label_embedding)
+        else:
+            raise ValueError("Encoder must be 'Bi-RNN' or 'Transformer'!")
 
-        self.harl = HARL(rnn_dim=config["model"]["rnn_dim"],
-                         image_feature_dim=self.resnet.fc.out_features,
-                         label_embedding_dim=config["model"]["label_embedding_dim"],
-                         num_classes_list=config["data"]["num_classes_list"],
-                         fc_dim=config["model"]["fc_dim"],
-                         pretrained_label_embedding=pretrained_label_embedding)
 
         self.section_linear1 = torch.nn.Linear(config["model"]["fc_dim"], config["model"]["fc_dim"])
         self.section_linear2 = torch.nn.Linear(config["model"]["fc_dim"], config["data"]["num_classes"])
@@ -116,8 +158,8 @@ class HARNN(torch.nn.Module):
 
         text_pad, lens = text_record
         embedding_output = self.embedding(text_pad)
-        rnn_out, rnn_avg = self.bi_rnn(embedding_output, lens)
-        segments_local_output_list, segments_local_scores_list = self.harl(image_feature, rnn_out, rnn_avg)
+        text_feature_out, text_feature_avg = self.encoder(embedding_output, lens)
+        segments_local_output_list, segments_local_scores_list = self.harl(image_feature, text_feature_out, text_feature_avg)
 
         segments_local_scores = torch.cat(segments_local_scores_list, dim=-1)
         segments_local_output = torch.stack(segments_local_output_list, dim=1)

@@ -56,25 +56,25 @@ class CPM(torch.nn.Module):
 
 
 class CDM(torch.nn.Module):
-    def __init__(self, rnn_hidden_dim):
+    def __init__(self, word_feature_dim):
         super(CDM, self).__init__()
-        self.rnn_hidden_dim = rnn_hidden_dim
+        self.word_feature_dim = word_feature_dim
 
     def forward(self, P_L, atttention_weight):
         K_h = torch.mean(torch.multiply(atttention_weight, P_L.unsqueeze(-1)), dim=1)
-        w_h = K_h.unsqueeze(-1).repeat(1, 1, 2 * self.rnn_hidden_dim)
+        w_h = K_h.unsqueeze(-1).repeat(1, 1, self.word_feature_dim)
         return w_h
 
 
 class HAM(torch.nn.Module):
-    def __init__(self, rnn_hidden_dim, image_feature_dim, label_embedding_dim, fc_dim, num_classes):
+    def __init__(self, word_feature_dim, image_feature_dim, label_embedding_dim, fc_dim, num_classes):
         super(HAM, self).__init__()
-        self.tca = TCA(word_feature_dim=2 * rnn_hidden_dim,
+        self.tca = TCA(word_feature_dim=word_feature_dim,
                        image_feature_dim=image_feature_dim,
                        label_feature_dim=label_embedding_dim,
                        num_classes=num_classes)
-        self.cpm = CPM(in_channel=3 * 2 * rnn_hidden_dim + image_feature_dim, hidden_channel=fc_dim, num_classes=num_classes)
-        self.cdm = CDM(rnn_hidden_dim=rnn_hidden_dim)
+        self.cpm = CPM(in_channel=3 * word_feature_dim + image_feature_dim, hidden_channel=fc_dim, num_classes=num_classes)
+        self.cdm = CDM(word_feature_dim=word_feature_dim)
 
     def forward(self, image_feature, text_feature, text_avg, w_h_last, local_output_list, local_scores_list):
         r_att, image_att, W_att = self.tca(image_feature, text_feature, w_h_last)
@@ -87,18 +87,18 @@ class HAM(torch.nn.Module):
 
 
 class HARL(torch.nn.Module):
-    def __init__(self, rnn_dim, image_feature_dim, label_embedding_dim, fc_dim, num_classes_list, pretrained_label_embedding=None):
+    def __init__(self, word_feature_dim, image_feature_dim, label_embedding_dim, fc_dim, num_classes_list, pretrained_label_embedding=None):
         super(HARL, self).__init__()
         self.net_sequence = []
         for num_classes in num_classes_list:
-            self.net_sequence.append(HAM(rnn_dim, image_feature_dim, label_embedding_dim, fc_dim, num_classes))
+            self.net_sequence.append(HAM(word_feature_dim, image_feature_dim, label_embedding_dim, fc_dim, num_classes))
         self.net_sequence = mySequential(*self.net_sequence)
 
-    def forward(self, image_feature, rnn_out, rnn_avg):
+    def forward(self, image_feature, text_feature, text_feature_avg):
         local_output_list = []
         local_scores_list = []
         # let w_0 = input_x
-        self.net_sequence(image_feature, rnn_out, rnn_avg, rnn_out, local_output_list, local_scores_list)
+        self.net_sequence(image_feature, text_feature, text_feature_avg, text_feature, local_output_list, local_scores_list)
         return local_output_list, local_scores_list
 
 

@@ -25,6 +25,12 @@ model:
   max_seq_len: 300
   word_embedding_dim: 100
   label_embedding_dim: 200
+  Encoder: Transformer
+
+  # transformer
+  nhead: 10
+
+  # bi-rnn
   rnn_dim: 256
   rnn_num_layers: 1
   fc_dim: 512
@@ -33,4 +39,4 @@ model:
   dropout: 0.5
   threshold: 0.5
 
-device: "cuda:0"
+device: "cuda:2"
