@@ -44,3 +44,9 @@ vuefrontend/package-lock.json
 # ignore some baseline
 baseline/GCN/
 baseline/HiAGM/
+
+# ignore archive files
+**/*.tar
+**/*.tar.gz
+**/*.zip
+

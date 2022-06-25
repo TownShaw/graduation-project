@@ -191,8 +191,8 @@ class HARNN(torch.nn.Module):
         section_global_output = torch.relu(self.section_linear1(torch.mean(section_local_output, dim=1)))
         section_global_scores = torch.sigmoid(self.section_linear2(section_global_output))
 
-        video_global_output = torch.relu(self.section_linear1(torch.mean(video_local_output, dim=1)))
-        video_global_scores = torch.sigmoid(self.section_linear2(video_global_output))
+        video_global_output = torch.relu(self.video_linear1(torch.mean(video_local_output, dim=1)))
+        video_global_scores = torch.sigmoid(self.video_linear2(video_global_output))
 
         # section_final_scores 预测的是每个 section 的知识点, video_final_scores 预测的是每个 video 的知识点
         section_final_scores = (1 - self.alpha) * section_local_scores + self.alpha * section_global_scores
