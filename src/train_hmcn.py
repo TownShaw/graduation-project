@@ -29,6 +29,7 @@ def set_seed(seed):
 def train(config: dict):
     model_name = ".".join(config["data"]["model_name"].split(".")[:-2])
     logger = utils.getLogger(config["log"]["log_dir"], model_name=model_name, name=config["log"]["name"])
+    logger.info(json.dumps(config, ensure_ascii=False))
 
     word2vec_file = config["data"]["word2vec"]
     logger.info("Loading pretrained word embedding from '{0}'".format(word2vec_file))
@@ -72,35 +73,35 @@ def train(config: dict):
     logger.info("Start training ...")
 
     # run an eval epoch before training
-    # model.eval()
-    # TP, FP, FN = 0, 0, 0
-    # total_scores, total_labels = [], []
-    # for eval_batch in tqdm.tqdm(khan_dataloader_validation):
-    #     for mini_eval_batch in utils.iter_batch_data(eval_batch, max_segment_num):
-    #         images = mini_eval_batch["images"].to(config["device"])
-    #         subtitles = mini_eval_batch["subtitles"].to(config["device"])
-    #         lens = mini_eval_batch["lens"]
-    #         labels = mini_eval_batch["labels"].to(config["device"])
-    #         segments = mini_eval_batch["segments"]
-    #         image_segments = mini_eval_batch["image_segments"]
+    model.eval()
+    TP, FP, FN = 0, 0, 0
+    total_scores, total_labels = [], []
+    for eval_batch in tqdm.tqdm(khan_dataloader_validation):
+        for mini_eval_batch in utils.iter_batch_data(eval_batch, max_segment_num):
+            images = mini_eval_batch["images"].to(config["device"])
+            subtitles = mini_eval_batch["subtitles"].to(config["device"])
+            lens = mini_eval_batch["lens"]
+            labels = mini_eval_batch["labels"].to(config["device"])
+            segments = mini_eval_batch["segments"]
+            image_segments = mini_eval_batch["image_segments"]
 
-    #         _, video_scores = model(images, (subtitles, lens), segments, image_segments)
-    #         mini_TP, mini_FP, mini_FN = utils.metric(video_scores.cpu().detach().numpy(),
-    #                                                  labels.cpu().detach().numpy(),
-    #                                                  threshold=config["model"]["threshold"],
-    #                                                  num_classes_list=config["data"]["num_classes_list"])
-    #         TP += mini_TP
-    #         FP += mini_FP
-    #         FN += mini_FN
-    #         total_scores.append(video_scores.cpu().detach().numpy())
-    #         total_labels.append(labels.cpu().detach().numpy())
-    # precision, recall, f1 = utils.calculate(TP, FP, FN)
-    # total_scores = np.concatenate(total_scores, axis=0)
-    # total_labels = np.concatenate(total_labels, axis=0)
-    # EMR = utils.metric_EMR(total_scores, total_labels, threshold=config["model"]["threshold"])
-    # auprc = average_precision_score(total_labels, total_scores, average="micro")
-    # logger.info("Eval Results: Micro-Precision: {:.4f}, Micro-Recall: {:.4f}, Micro-F1: {:.4f}, AUPRC: {:.4f}, EMR: {:.4f}".format(precision, recall, f1, auprc, EMR))
-    # logger.info("Eval Best-AUPRC: {:.4f}".format(best_auprc))
+            _, video_scores = model(images, (subtitles, lens), segments, image_segments)
+            mini_TP, mini_FP, mini_FN = utils.metric(video_scores.cpu().detach().numpy(),
+                                                     labels.cpu().detach().numpy(),
+                                                     threshold=config["model"]["threshold"],
+                                                     num_classes_list=config["data"]["num_classes_list"])
+            TP += mini_TP
+            FP += mini_FP
+            FN += mini_FN
+            total_scores.append(video_scores.cpu().detach().numpy())
+            total_labels.append(labels.cpu().detach().numpy())
+    precision, recall, f1 = utils.calculate(TP, FP, FN)
+    total_scores = np.concatenate(total_scores, axis=0)
+    total_labels = np.concatenate(total_labels, axis=0)
+    EMR = utils.metric_EMR(total_scores, total_labels, threshold=config["model"]["threshold"])
+    auprc = average_precision_score(total_labels, total_scores, average="micro")
+    logger.info("Eval Results: Micro-Precision: {:.4f}, Micro-Recall: {:.4f}, Micro-F1: {:.4f}, AUPRC: {:.4f}, EMR: {:.4f}".format(precision, recall, f1, auprc, EMR))
+    logger.info("Eval Best-AUPRC: {:.4f}".format(best_auprc))
 
     for epoch in range(config["model"]["epochs"]):
         logger.info("Epoch: {}".format(epoch + 1))
