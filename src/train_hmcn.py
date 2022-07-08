@@ -98,7 +98,7 @@ def train(config: dict):
     precision, recall, f1 = utils.calculate(TP, FP, FN)
     total_scores = np.concatenate(total_scores, axis=0)
     total_labels = np.concatenate(total_labels, axis=0)
-    EMR = utils.metric_EMR(total_scores, total_labels, threshold=config["model"]["threshold"])
+    EMR = utils.metric_EMR(total_scores, total_labels, config["data"]["num_classes_list"], threshold=config["model"]["threshold"])
     auprc = average_precision_score(total_labels, total_scores, average="micro")
     logger.info("Eval Results: Micro-Precision: {:.4f}, Micro-Recall: {:.4f}, Micro-F1: {:.4f}, AUPRC: {:.4f}, EMR: {:.4f}".format(precision, recall, f1, auprc, EMR))
     logger.info("Eval Best-AUPRC: {:.4f}".format(best_auprc))
@@ -139,7 +139,7 @@ def train(config: dict):
                                           num_classes_list=config["data"]["num_classes_list"])
                 precision, recall, f1 = utils.calculate(TP, FP, FN)
                 auprc = average_precision_score(eval_labels, outputs, average="micro")
-                EMR = utils.metric_EMR(outputs, eval_labels, config["model"]["threshold"])
+                EMR = utils.metric_EMR(outputs, eval_labels, config["data"]["num_classes_list"], config["model"]["threshold"])
                 logger.info("Epoch: {}, Step: {}, Train Loss: {:.4f}, \
 Precsion: {:.4f}, Recall: {:.4f}, F1: {:.4f}, AUPRC: {:.4f}, EMR: {:.4f}".format(epoch + 1,
                                                                                  tmp_step,
@@ -155,6 +155,7 @@ Precsion: {:.4f}, Recall: {:.4f}, F1: {:.4f}, AUPRC: {:.4f}, EMR: {:.4f}".format
 
         model.eval()
         TP, FP, FN = 0, 0, 0
+        total_scores, total_labels = [], []
         for eval_batch in tqdm.tqdm(khan_dataloader_validation):
             for mini_eval_batch in utils.iter_batch_data(eval_batch, max_segment_num):
                 images = mini_eval_batch["images"].to(config["device"])
@@ -173,15 +174,17 @@ Precsion: {:.4f}, Recall: {:.4f}, F1: {:.4f}, AUPRC: {:.4f}, EMR: {:.4f}".format
                 TP += mini_TP
                 FP += mini_FP
                 FN += mini_FN
+                total_scores.append(video_scores.cpu().detach().numpy())
+                total_labels.append(labels.cpu().detach().numpy())
         precision, recall, f1 = utils.calculate(TP, FP, FN)
         total_scores = np.concatenate(total_scores, axis=0)
         total_labels = np.concatenate(total_labels, axis=0)
-        EMR = utils.metric_EMR(total_scores, total_labels, threshold=config["model"]["threshold"])
+        EMR = utils.metric_EMR(total_scores, total_labels, config["data"]["num_classes_list"], threshold=config["model"]["threshold"])
         auprc = average_precision_score(total_labels, total_scores, average="micro")
         if best_auprc < auprc:
             best_auprc = auprc
-            # checkpoint = {"model_state_dict": model.state_dict(), "best_auprc": best_auprc}
-            # torch.save(checkpoint, os.path.join(config["data"]["model_save_dir"], config["data"]["model_name"]))
+            checkpoint = {"model_state_dict": model.state_dict(), "best_auprc": best_auprc}
+            torch.save(checkpoint, os.path.join(config["data"]["model_save_dir"], config["data"]["model_name"]))
         logger.info("Eval Results: Micro-Precision: {:.4f}, Micro-Recall: {:.4f}, Micro-F1: {:.4f}, AUPRC: {:.4f}, EMR: {:.4f}".format(precision, recall, f1, auprc, EMR))
         logger.info("Eval Best-AUPRC: {:.4f}".format(best_auprc))
 
@@ -190,6 +193,6 @@ if __name__ == "__main__":
     set_seed(2022)
 
     config_dir = "config"
-    config_file = "HMNet_HMCN.Khan.yaml"
+    config_file = "HMNet.Khan.yaml"
     config = yaml.load(open(os.path.join(config_dir, config_file), "r", encoding="utf-8"), Loader=yaml.FullLoader)
     train(config=config)
