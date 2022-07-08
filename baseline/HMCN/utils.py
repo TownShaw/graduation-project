@@ -182,7 +182,8 @@ def metric(predicts: np.ndarray, labels: np.ndarray, threshold: float, num_class
 
     return TP, FP, FN
     """
-    predict_labels = (predicts >= threshold).astype(np.float32)
+    # predict_labels = (predicts >= threshold).astype(np.float32)
+    predict_labels = get_predictions(predicts, num_classes_list, threshold)
     TP = np.sum(predict_labels * labels)
     FP_matrix = ((predict_labels - labels) > 0).astype(np.float32)
     FP = np.sum(FP_matrix)
@@ -206,7 +207,23 @@ def calculate(TP: int, FP: int, FN: int):
     return precision, recall, f1
 
 
-def metric_EMR(predicts: np.ndarray, labels: np.ndarray, threshold: float=0.5):
-    predict_labels = (predicts >= threshold).astype(np.float32)
+def metric_EMR(predicts: np.ndarray, labels: np.ndarray, num_classes_list: list, threshold: float=0.5):
+    # predict_labels = (predicts >= threshold).astype(np.float32)
+    predict_labels = get_predictions(predicts, num_classes_list, threshold)
     EMR = np.sum((predict_labels == labels).all(axis=-1).astype(np.int32)) / len(labels)
     return EMR
+
+
+def get_predictions(scores: np.ndarray, num_classes_list: list, threshold: float=0.5) -> np.ndarray:
+    threshold_results = (scores >= threshold)
+    start_idx, end_idx = 0, 0
+    top1_results = []
+    for level_classes_num in num_classes_list:
+        start_idx = end_idx
+        end_idx += level_classes_num
+        level_top1_results = np.argmax(scores[:, start_idx:end_idx], axis=-1) + start_idx
+        top1_results.append(level_top1_results)
+    top1_results = np.stack(top1_results, axis=0).T
+    for idx in range(len(top1_results)):
+        threshold_results[idx][top1_results[idx]] = True
+    return threshold_results.astype(np.float32)

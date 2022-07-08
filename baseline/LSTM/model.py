@@ -9,7 +9,7 @@
 import torch
 import torch.nn.functional as F
 from torch.nn.init import xavier_normal_
-from torch.nn.utils.rnn import pad_sequence, pack_padding_sequence, pad_packed_sequence
+from torch.nn.utils.rnn import pad_sequence, pack_padded_sequence, pad_packed_sequence
 
 
 class EmbeddingLayer(torch.nn.Module):
@@ -59,11 +59,11 @@ class LSTMModel(torch.nn.Module):
                                    hidden_dim=config["model"]["rnn_dim"],
                                    num_layers=config["model"]["rnn_num_layers"],
                                    dropout=config["model"]["dropout"])
-        self.linear_out = torch.nn.Linear(config["model"]["rnn_dim"], config["data"]["num_classes"])
+        self.linear_out = torch.nn.Linear(2 * config["model"]["rnn_dim"], config["data"]["num_classes"])
 
     def forward(self, text_record, segments):
-        input_x, lens = text_record
-        embedding_out = self.embedding(input_x, lens)
+        input_x, lens = text_record 
+        embedding_out = self.embedding(input_x)
         text_output = self.bi_lstm(embedding_out, lens)
         logits = self.linear_out(text_output)
         scores = torch.sigmoid(logits)

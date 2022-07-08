@@ -143,10 +143,9 @@ class HMCN_R(torch.nn.Module):
 
         self.recurrent = RecurrentUnit(2 * self.rnn_dim + self.hidden_dim, self.hidden_dim)
         self.global_out = torch.nn.Linear(2 * self.rnn_dim + self.hidden_dim, self.num_classes)
-        self.local_out_nets = [torch.nn.Linear(self.hidden_dim, self.num_classes_list[idx]) for idx in range(len(self.num_classes_list))]
+        self.local_out_nets = torch.nn.ModuleList([torch.nn.Linear(self.hidden_dim, self.num_classes_list[idx]) for idx in range(len(self.num_classes_list))])
 
     def forward(self, input_x):
-        self.local_out_nets = [net.to(input_x.device) for net in self.local_out_nets]
         local_scores_list = []
 
         hidden_state = xavier_normal_(torch.rand(input_x.shape[0], self.hidden_dim, dtype=torch.float32)).to(input_x.device)

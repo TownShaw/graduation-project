@@ -60,7 +60,7 @@ class TextCNNModel(torch.nn.Module):
 
     def forward(self, input_x, segments):
         embedding_out = self.embedding(input_x)
-        text_output = self.textcnn(embedding_out)
+        text_output = self.textcnn(embedding_out.unsqueeze(1))
         logits = self.linear_out(text_output)
         scores = torch.sigmoid(logits)
 

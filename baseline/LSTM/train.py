@@ -27,7 +27,9 @@ def set_seed(seed):
 
 
 def train(config: dict):
-    logger = utils.getLogger(config["log"]["log_dir"], name=config["log"]["name"])
+    model_name = ".".join(config["data"]["model_name"].split(".")[:-2])
+    logger = utils.getLogger(config["log"]["log_dir"], model_name=model_name, name=config["log"]["name"])
+    logger.info(json.dumps(config, ensure_ascii=False))
 
     word2vec_file = config["data"]["word2vec"]
     logger.info("Loading pretrained word embedding from '{0}'".format(word2vec_file))
@@ -94,7 +96,7 @@ def train(config: dict):
     total_scores = np.concatenate(total_scores, axis=0)
     total_labels = np.concatenate(total_labels, axis=0)
     precision, recall, f1 = utils.calculate(TP, FP, FN)
-    EMR = utils.metric_EMR(total_scores, total_labels)
+    EMR = utils.metric_EMR(total_scores, total_labels, config["data"]["num_classes_list"])
     auprc = average_precision_score(total_labels, total_scores, average="micro")
     logger.info("Eval Results: Micro-Precision: {:.4f}, Micro-Recall: {:.4f}, Micro-F1: {:.4f}, AUPRC: {:.4f}, EMR: {:.4f}".format(precision, recall, f1, auprc, EMR))
     logger.info("Eval Best-AUPRC: {:.4f}".format(best_auprc))
@@ -132,7 +134,7 @@ def train(config: dict):
                                           threshold=config["model"]["threshold"],
                                           num_classes_list=config["data"]["num_classes_list"])
                 precision, recall, f1 = utils.calculate(TP, FP, FN)
-                EMR = utils.metric_EMR(outputs, eval_labels)
+                EMR = utils.metric_EMR(outputs, eval_labels, config["data"]["num_classes_list"])
                 auprc = average_precision_score(eval_labels, outputs, average="micro")
                 logger.info("Epoch: {}, Step: {}, Train Loss: {:.4f},\
 Precsion: {:.4f}, Recall: {:.4f}, Micro-F1: {:.4f}, AUPRC: {:.4f}, EMR: {:.4f}".format(epoch + 1,
@@ -171,7 +173,7 @@ Precsion: {:.4f}, Recall: {:.4f}, Micro-F1: {:.4f}, AUPRC: {:.4f}, EMR: {:.4f}".
         total_scores = np.concatenate(total_scores, axis=0)
         total_labels = np.concatenate(total_labels, axis=0)
         precision, recall, f1 = utils.calculate(TP, FP, FN)
-        EMR = utils.metric_EMR(total_scores, total_labels)
+        EMR = utils.metric_EMR(total_scores, total_labels, config["data"]["num_classes_list"])
         auprc = average_precision_score(total_labels, total_scores, average="micro")
         if best_auprc < auprc:
             best_auprc = auprc
@@ -184,7 +186,7 @@ Precsion: {:.4f}, Recall: {:.4f}, Micro-F1: {:.4f}, AUPRC: {:.4f}, EMR: {:.4f}".
 if __name__ == "__main__":
     set_seed(2022)
 
-    config_dir = "baseline/TextCNN"
-    config_file = "TextCNN.Khan.yaml"
+    config_dir = "baseline/LSTM"
+    config_file = "LSTM.Khan.yaml"
     config = yaml.load(open(os.path.join(config_dir, config_file), "r", encoding="utf-8"), Loader=yaml.FullLoader)
     train(config)

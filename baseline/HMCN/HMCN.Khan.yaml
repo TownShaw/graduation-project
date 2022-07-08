@@ -36,7 +36,7 @@ HMCN-R:
   epochs: 20
   batch_size: 8
   pad_word: <unk>
-  max_seq_len: 300
+  max_seq_len: 200
   word_embedding_dim: 100
   rnn_dim: 256
   rnn_num_layers: 1
@@ -46,4 +46,4 @@ HMCN-R:
   dropout: 0.5
   threshold: 0.5
 
-device: "cuda:1"
+device: "cuda:0"

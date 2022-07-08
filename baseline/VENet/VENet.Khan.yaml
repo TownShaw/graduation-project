@@ -3,7 +3,7 @@ log:
   log_dir: logs
 data:
   name: Khan
-  root_dir: /share/tongxiao/7.10BigData
+  root_dir: /share/tongxiao/graduation-project
   data_dir: data
   subtitle_dir: data/subtitles
   video_dir: data/videos
@@ -15,16 +15,16 @@ data:
   index2know: data/Khan.index2know.pkl
   word2vec: data/word2vec/glove.6B.100d.txt
   model_save_dir: models
-  model_name: VENet.Khan.model
-  num_classes: 201
-  num_classes_list: [2, 11, 188]
+  model_name: VENet_2.Khan.model
+  num_classes: 398
+  num_classes_list: [6, 42, 350]
 
 model:
   epochs: 20
   batch_size: 8
   pad_word: <unk>
   max_seq_len: 200
-  word_embedding_dim: 300
+  word_embedding_dim: 100
 
   # text lstm
   text_lstm_dim: 100
@@ -47,5 +47,7 @@ model:
   alpha: 0.5
   dropout: 0.5
   threshold: 0.5
+
+count: 2
 
 device: "cuda:0"

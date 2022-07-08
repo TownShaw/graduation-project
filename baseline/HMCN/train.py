@@ -28,6 +28,7 @@ def set_seed(seed):
 
 def train(config: dict, model_name: str):
     logger = utils.getLogger(config["log"]["log_dir"], model_name, name=config["log"]["name"])
+    logger.info(json.dumps(config, ensure_ascii=False))
 
     word2vec_file = config["data"]["word2vec"]
     logger.info("Loading pretrained word embedding from '{0}'".format(word2vec_file))
@@ -54,14 +55,14 @@ def train(config: dict, model_name: str):
     best_auprc = 0.0
     model = HMCN(config, model_name, len(word2idx), pretrained_word_embedding=pretrained_embedding)
     model_save_path = os.path.join(config["data"]["model_save_dir"], "{}.Khan.model".format(model_name))
-    if not os.path.isdir(config["data"]["model_save_dir"]):
-        os.mkdir(config["data"]["model_save_dir"])
-    if os.path.isfile(model_save_path):
-        logger.info("Loading model from {} ...".format(model_save_path))
-        checkpoint = torch.load(model_save_path, map_location="cpu")
-        model.load_state_dict(checkpoint["model_state_dict"])
-        best_auprc = checkpoint["best_auprc"]
-    logger.info("Best-AUPRC: {}".format(best_auprc))
+    # if not os.path.isdir(config["data"]["model_save_dir"]):
+    #     os.mkdir(config["data"]["model_save_dir"])
+    # if os.path.isfile(model_save_path):
+    #     logger.info("Loading model from {} ...".format(model_save_path))
+    #     checkpoint = torch.load(model_save_path, map_location="cpu")
+    #     model.load_state_dict(checkpoint["model_state_dict"])
+    #     best_auprc = checkpoint["best_auprc"]
+    # logger.info("Best-AUPRC: {}".format(best_auprc))
     model = model.to(config["device"])
 
     optim = torch.optim.Adam(model.parameters(), lr=config[model_name]["learning_rate"])
@@ -94,8 +95,8 @@ def train(config: dict, model_name: str):
     total_scores = np.concatenate(total_scores, axis=0)
     total_labels = np.concatenate(total_labels, axis=0)
     precision, recall, f1 = utils.calculate(TP, FP, FN)
-    EMR = utils.metric_EMR(total_scores, total_labels)
     auprc = average_precision_score(total_labels, total_scores, average="micro")
+    EMR = utils.metric_EMR(total_scores, total_labels, config["data"]["num_classes_list"])
     logger.info("Eval Results: Micro-Precision: {:.4f}, Micro-Recall: {:.4f}, Micro-F1: {:.4f}, AUPRC: {:.4f}, EMR: {:.4f}".format(precision, recall, f1, auprc, EMR))
     logger.info("Eval Best-AUPRC: {:.4f}".format(best_auprc))
 
@@ -132,17 +133,17 @@ def train(config: dict, model_name: str):
                                           threshold=config[model_name]["threshold"],
                                           num_classes_list=config["data"]["num_classes_list"])
                 precision, recall, f1 = utils.calculate(TP, FP, FN)
-                auprc = average_precision_score(eval_labels, outputs)
-                EMR = utils.metric_EMR(outputs, eval_labels)
+                auprc = average_precision_score(eval_labels, outputs, average="micro")
+                EMR = utils.metric_EMR(outputs, eval_labels, config["data"]["num_classes_list"])
                 logger.info("Epoch: {}, Step: {}, Train Loss: {:.4f}, \
-Precsion: {:.4f}, Recall: {:.4f}, F1: {:.4f}".format(epoch + 1,
-                                                     tmp_step,
-                                                     total_loss / 100,
-                                                     precision,
-                                                     recall,
-                                                     f1,
-                                                     auprc,
-                                                     EMR))
+Precsion: {:.4f}, Recall: {:.4f}, F1: {:.4f}, AUPRC: {:.4f}, EMR: {:.4f}".format(epoch + 1,
+                                                                                 tmp_step,
+                                                                                 total_loss / 100,
+                                                                                 precision,
+                                                                                 recall,
+                                                                                 f1,
+                                                                                 auprc,
+                                                                                 EMR))
                 outputs_list = []
                 labels_list = []
                 total_loss = 0.0
@@ -171,12 +172,12 @@ Precsion: {:.4f}, Recall: {:.4f}, F1: {:.4f}".format(epoch + 1,
         total_scores = np.concatenate(total_scores, axis=0)
         total_labels = np.concatenate(total_labels, axis=0)
         precision, recall, f1 = utils.calculate(TP, FP, FN)
-        EMR = utils.metric_EMR(total_scores, total_labels)
         auprc = average_precision_score(total_labels, total_scores, average="micro")
+        EMR = utils.metric_EMR(total_scores, total_labels, config["data"]["num_classes_list"])
         if best_auprc < auprc:
             best_auprc = auprc
             checkpoint = {"model_state_dict": model.state_dict(), "best_auprc": best_auprc}
-            torch.save(checkpoint, os.path.join(config["data"]["model_save_dir"], "{}.{}.model".format(model_name, config["data"]["name"])))
+            torch.save(checkpoint, os.path.join(config["data"]["model_save_dir"], "{}_2.Khan.model".format(model_name)))
         logger.info("Eval Results: Micro-Precision: {:.4f}, Micro-Recall: {:.4f}, Micro-F1: {:.4f}, AUPRC: {:.4f}, EMR: {:.4f}".format(precision, recall, f1, auprc, EMR))
         logger.info("Eval Best-AUPRC: {:.4f}".format(best_auprc))
 
