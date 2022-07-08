@@ -26,21 +26,13 @@ def set_seed(seed):
     np.random.seed(seed)
 
 
-def count_violate_num(section_scores: np.ndarray, video_labels: np.ndarray, segments: list, threshold: float=0.5):
-    violate_num, total_num = 0, 0
-    start_idx, end_idx = 0, 0
-    for vidx, video in enumerate(segments):
-        labels = video_labels[vidx]
-        start_idx = end_idx
-        end_idx += len(video)
-        for section_idx in range(start_idx, end_idx):
-            total_num += 1
-            precict_labels = (section_scores[section_idx] >= threshold).astype(np.int32)
-            diff = precict_labels - labels
-            violate_label_num = np.sum((diff > 0).astype(np.int32))
-            if violate_label_num > 0:
-                violate_num += 1
-    return violate_num, total_num
+def dump_prediction(scores: np.ndarray, labels: np.ndarray, out_filename: str, threshold: float=0.5):
+    with open(out_filename, "w", encoding="utf-8") as fout:
+        for score, label in zip(scores, labels):
+            predict_result = (score >= threshold).astype(np.int32)
+            predict_indices = np.argsort(predict_result, kind="stable")[::-1][:np.sum(predict_result)][::-1]
+            predict_scores = score[predict_indices]
+            fout.write(json.dumps({"true_labels": label.tolist(), "predict_labels": predict_indices, "predict_scores": predict_scores}))
 
 
 def eval(config: dict):
@@ -57,7 +49,7 @@ def eval(config: dict):
                                                              shuffle=False,
                                                              collate_fn=collate_fn)
 
-    best_f1 = 0.0
+    best_auprc = 0.0
     model = HARNN(config, len(word2idx), pretrained_word_embedding=pretrained_embedding)
     model_save_path = os.path.join(config["data"]["model_save_dir"], config["data"]["model_name"])
     if not os.path.isfile(model_save_path):
@@ -66,15 +58,13 @@ def eval(config: dict):
         print("Loading model from {} ...".format(model_save_path))
         checkpoint = torch.load(model_save_path, map_location="cpu")
         model.load_state_dict(checkpoint["model_state_dict"])
-        best_f1 = checkpoint["best_f1"]
-    print("Best-F1: {}".format(best_f1))
+        best_auprc = checkpoint["best_auprc"]
+    print("Best-AUPRC: {}".format(best_auprc))
     model = model.to(config["device"])
 
-    max_segment_num = 32
+    max_segment_num = 40
     print("Evaluating ...")
 
-    section_violate_num = 0
-    section_total_num = 0
     # run an eval epoch before training
     model.eval()
     TP, FP, FN = 0, 0, 0
@@ -90,10 +80,6 @@ def eval(config: dict):
             image_segments = mini_eval_batch["image_segments"]
 
             section_scores, video_scores = model(images, (subtitles, lens), segments, image_segments)
-            tmp_violate_num, tmp_section_num = count_violate_num(section_scores.cpu().detach().numpy(), labels.cpu().detach().numpy(), segments)
-            section_violate_num += tmp_violate_num
-            section_total_num += tmp_section_num
-
             mini_TP, mini_FP, mini_FN = utils.metric(video_scores.cpu().detach().numpy(),
                                                      labels.cpu().detach().numpy(),
                                                      threshold=config["model"]["threshold"],
@@ -107,7 +93,11 @@ def eval(config: dict):
     total_scores = np.concatenate(total_scores, axis=0)
     total_labels = np.concatenate(total_labels, axis=0)
     auprc = average_precision_score(total_labels, total_scores, average="micro")
-    print("Eval Results: Micro-Precision: {:.4f}, Micro-Recall: {:.4f}, Micro-F1: {:.4f}, AUPRC: {:.4f}, Violate-Ratio: {:.4f}".format(precision, recall, f1, auprc, section_violate_num / section_total_num))
+    EMR = utils.metric_EMR(total_scores, total_labels)
+    print("Eval Results: Micro-Precision: {:.4f}, Micro-Recall: {:.4f}, Micro-F1: {:.4f}, AUPRC: {:.4f}, EMR: {:.4f}".format(precision, recall, f1, auprc, EMR))
+
+    model_name = ".".join(config["data"]["model_name"].split(".")[:-2])
+    dump_prediction(total_scores, total_labels, f"{model_name}.txt", config["model"]["threshold"])
 
 
 if __name__ == "__main__":
